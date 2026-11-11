@@ -8,6 +8,8 @@ import {
   Check,
   CheckCheck,
   ClipboardList,
+  Copy,
+  Download,
   Edit3,
   History,
   Info,
@@ -26,6 +28,9 @@ import { TripCoverPicker } from './TripCoverPicker';
 import { bookingTime, currency, memberName } from './bookingUtils';
 import { dateKey, formatDate, vietnamToday } from './lib';
 import { STATUS_LABELS } from './types';
+import { useAppRoute } from './navigation';
+import { copyText, downloadText } from './userActions';
+import { activityFinancialPeople, buildActivityCsv, buildActivityMessage } from './financeExport';
 import type { useClub } from './useClub';
 import {
   CHECK_STATUS,
@@ -61,6 +66,7 @@ type Action = {
   participant?: TripParticipant;
   item?: TripChecklist;
   preset?: 'court' | 'shuttle';
+  paymentKind?: LedgerEntry['kind'];
 };
 const activeExpenses = (a: ClubActivity) =>
   (a.expenses ?? []).filter((e) => !e.voided_at);
@@ -161,7 +167,11 @@ export function ActivitiesPage({
   club: Club;
   kind: ActivityKind;
 }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const [route, navigateRoute] = useAppRoute();
+  const page = kind === 'trip' ? 'travel' : 'finance';
+  const selected = route.page === page ? route.activity : undefined;
+  const setSelected = (id: string | null) =>
+    navigateRoute({ page, activity: id ?? undefined });
   const [action, setAction] = useState<Action | null>(null);
   const isAdmin = club.account?.role === 'admin';
   const verified = club.booking?.verified_member_id;
@@ -444,6 +454,7 @@ export function ActivitiesPage({
                     club={club}
                     activity={activity}
                     personId={action.personId}
+                    initialKind={action.paymentKind}
                     original={action.entry}
                     close={() => setAction(null)}
                   />
@@ -483,6 +494,7 @@ export function ActivityDetail({
   onAction: (a: Action) => void;
 }) {
   const [tab, setTab] = useState('fees');
+  const [exportNotice, setExportNotice] = useState('');
   const calc = a.calculation,
     trip = a.kind === 'trip',
     manager = !!a.can_manage;
@@ -526,6 +538,11 @@ export function ActivityDetail({
           ),
         ),
       ].join(', ');
+  function shareUrl() {
+    const url = new URL(window.location.href);
+    url.hash = `${trip ? 'travel' : 'finance'}?${new URLSearchParams({ activity: a.id })}`;
+    return url.toString();
+  }
   return (
     <div className="activity-detail">
       {trip && a.details.cover_url && (
@@ -561,6 +578,37 @@ export function ActivityDetail({
           </button>
         )}
       </div>
+      {calc && (
+        <div className="finance-actions" aria-label="Chia sẻ và xuất dữ liệu">
+          <button
+            className="btn"
+            onClick={async () => {
+              try {
+                await copyText(buildActivityMessage(a, club.members, shareUrl()));
+                setExportNotice('Đã sao chép tin nhắn. Bạn có thể dán vào nhóm Zalo.');
+              } catch {
+                setExportNotice('Chưa sao chép được. Hãy thử lại hoặc dùng Xuất CSV.');
+              }
+            }}
+          >
+            <Copy size={15} /> Sao chép tin nhắn nhóm
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              try {
+                downloadText(buildActivityCsv(a, club.members), `${trip ? 'chuyen-di' : 'bang-phi'}-${a.id}.csv`);
+                setExportNotice('Đã tạo tệp CSV từ dữ liệu đang hiển thị.');
+              } catch {
+                setExportNotice('Chưa xuất được tệp CSV. Hãy thử lại.');
+              }
+            }}
+          >
+            <Download size={15} /> Xuất CSV
+          </button>
+        </div>
+      )}
+      {exportNotice && <p role="status" className="form-help">{exportNotice}</p>}
       {trip && (
         <div className="trip-information">
           <p className="trip-description">{a.details.description}</p>
@@ -1072,6 +1120,31 @@ export function ActivityDetail({
                             ? `Liên kết khoản chi: ${expenses.find((e) => e.id === i.expense_id)?.name ?? 'Khoản chi đã hủy'}`
                             : 'Chưa liên kết khoản chi · không cộng tiền'}
                         </small>
+                        {manager && (
+                          <label className="field">
+                            <span>Trạng thái chuẩn bị {i.name}</span>
+                            <select
+                              aria-label={`Trạng thái chuẩn bị ${i.name}`}
+                              value={i.status}
+                              disabled={busy(club)}
+                              onChange={(event) => {
+                                const status = event.target.value;
+                                if (status === i.status) return;
+                                void club.run(
+                                  () => club.bookingRpc('save_trip_checklist', {
+                                    p_activity: a.id,
+                                    p_id: i.id,
+                                    p_patch: { status },
+                                    p_expected_version: i.version,
+                                  }),
+                                  `Đã cập nhật trạng thái ${i.name}`,
+                                );
+                              }}
+                            >
+                              {Object.entries(CHECK_STATUS).map(([status, label]) => <option key={status} value={status}>{label}</option>)}
+                            </select>
+                          </label>
+                        )}
                       </div>
                       {manager && (
                         <button
@@ -1133,22 +1206,8 @@ function FeePeople({
   onAction: (a: Action) => void;
 }) {
   const [filter, setFilter] = useState('all');
-  const c = a.calculation!,
-    ledger = a.ledger ?? [];
-  const people = [...c.people];
-  // A cancelled participant with an advance still needs an explicit refund line.
-  if (a.kind === 'trip')
-    for (const p of a.participants ?? [])
-      if (!people.some((x) => x.id === p.id) && netPaid(ledger, p.id) !== 0)
-        people.push({
-          id: p.id,
-          member_id: p.member_id,
-          name: personLabel(club, a, p.id),
-          units: 0,
-          groups: [],
-          exact: 0,
-          due: 0,
-        });
+  const ledger = a.ledger ?? [];
+  const people = activityFinancialPeople(a, club.members);
   return (
     <>
       <label className="finance-filter">
@@ -1250,7 +1309,7 @@ function FeePeople({
                             a.fee_status !== 'finalized')
                         }
                         onClick={() =>
-                          onAction({ type: 'payment', personId: p.id })
+                          onAction({ type: 'payment', personId: p.id, paymentKind: left < 0 ? 'refund' : 'collection' })
                         }
                       >
                         {left < 0 ? 'Hoàn tiền' : 'Thu / hoàn'}
@@ -2107,19 +2166,25 @@ function FeeStateForm({
   close: () => void;
 }) {
   const finalized = useRef(a.fee_status === 'finalized').current;
-  const revision = useRef(club.activities?.revision);
+  const [reviewed, setReviewed] = useState(() => ({
+    revision: club.activities?.revision,
+    calculation: a.calculation,
+  }));
+  const changed = reviewed.revision !== club.activities?.revision;
+  const stateChanged = finalized !== (a.fee_status === 'finalized');
   return (
     <form
       className="activity-form"
       onSubmit={async (e) => {
         const f = formValues(e);
+        if (changed || stateChanged) return;
         if (
           await club.run(
             () =>
               club.bookingRpc('set_activity_fee_state', {
                 p_id: a.id,
                 p_action: finalized ? 'reopen' : 'finalize',
-                p_expected_revision: revision.current,
+                p_expected_revision: reviewed.revision,
                 p_reason: text(f, 'reason'),
               }),
             finalized
@@ -2136,15 +2201,28 @@ function FeeStateForm({
           : 'Kiểm tra người thực tế chịu phí và các khoản trước khi chốt. Số tiền sau khi chốt giữ nguyên dù đăng ký thay đổi.'}
       </p>
       <div className="fee-confirm-total">
-        <strong>{currency(a.calculation?.total_due ?? 0)}</strong>
+        <strong>{currency(reviewed.calculation?.total_due ?? 0)}</strong>
         <span>
-          {a.calculation?.headcount ?? 0} người · {a.calculation?.shares ?? 0}{' '}
+          {reviewed.calculation?.headcount ?? 0} người · {reviewed.calculation?.shares ?? 0}{' '}
           suất
         </span>
       </div>
-      {!finalized && !!a.calculation?.warnings.length && (
+      {(changed || stateChanged) && (
+        <div className="finance-warnings" role="alert">
+          <p>Dữ liệu đã thay đổi từ khi mở bảng xác nhận. Ghi chú bạn đang nhập vẫn được giữ lại.</p>
+          {stateChanged ? (
+            <p>Thiết bị khác đã {a.fee_status === 'finalized' ? 'chốt' : 'mở lại'} bảng phí. Hãy đóng cửa sổ này và kiểm tra trạng thái mới trước khi tiếp tục.</p>
+          ) : (
+            <>
+              <p>Bản mới nhất: {currency(a.calculation?.total_due ?? 0)} · {a.calculation?.headcount ?? 0} người · {a.calculation?.shares ?? 0} suất.</p>
+              <button type="button" className="text-btn" onClick={() => setReviewed({ revision: club.activities?.revision, calculation: a.calculation })}>Đã đối chiếu, dùng bảng phí mới nhất</button>
+            </>
+          )}
+        </div>
+      )}
+      {!finalized && !!reviewed.calculation?.warnings.length && (
         <div className="finance-warnings">
-          {a.calculation.warnings.map((w) => (
+          {reviewed.calculation.warnings.map((w) => (
             <p key={w}>{w}</p>
           ))}
         </div>
@@ -2158,6 +2236,7 @@ function FeeStateForm({
       <SaveFooter
         club={club}
         label={finalized ? 'Mở lại để điều chỉnh' : 'Xác nhận chốt tiền'}
+        disabled={changed || stateChanged}
       />
     </form>
   );
@@ -2167,12 +2246,14 @@ function PaymentForm({
   club,
   activity: a,
   personId,
+  initialKind,
   original: l,
   close,
 }: {
   club: Club;
   activity: ClubActivity;
   personId?: string;
+  initialKind?: LedgerEntry['kind'];
   original?: LedgerEntry;
   close: () => void;
 }) {
@@ -2182,12 +2263,12 @@ function PaymentForm({
     !(a.participants ?? []).some((p) => p.id === personId) &&
     trip;
   const [kind, setKind] = useState<LedgerEntry['kind']>(
-    l?.kind ??
+    l?.kind ?? initialKind ??
       (advance
         ? 'reimbursement'
         : netPaid(a.ledger ?? [], personId ?? '') >
             (a.calculation?.people.find((p) => p.id === personId)?.due ??
-              Infinity)
+              0)
           ? 'refund'
           : 'collection'),
   );
@@ -2257,7 +2338,7 @@ function PaymentForm({
     <form className="activity-form" onSubmit={submit}>
       <div className="alert">
         <Info size={17} />
-        <span>Xác nhận thủ công sau khi đã nhận hoặc hoàn tiền thực tế.</span>
+        <span>{kind === 'refund' ? 'Bạn đang ghi nhận hoàn tiền đã đóng cho thành viên. Chỉ xác nhận sau khi đã hoàn tiền thực tế.' : kind === 'reimbursement' ? 'Bạn đang ghi nhận quỹ hoàn lại tiền cá nhân đã ứng. Khoản này không tính là tiền thành viên đóng.' : 'Bạn đang ghi nhận thu tiền vào quỹ. Chỉ xác nhận sau khi đã nhận tiền thực tế.'}</span>
       </div>
       <label className="field">
         <span>Loại ghi nhận</span>
@@ -2334,7 +2415,7 @@ function PaymentForm({
       </p>
       <SaveFooter
         club={club}
-        label={l ? 'Lưu điều chỉnh' : 'Xác nhận đã thu / hoàn'}
+        label={l ? 'Lưu điều chỉnh' : kind === 'refund' ? 'Xác nhận hoàn tiền đóng' : kind === 'reimbursement' ? 'Xác nhận hoàn tiền ứng' : 'Xác nhận đã thu tiền'}
       />
       {l && (
         <button

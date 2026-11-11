@@ -12,7 +12,7 @@ Sau khi đã chạy migration tài chính 003, chạy toàn bộ [migration 004]
 
 Bản 004 chỉ áp dụng tự động cho lịch tạo mới, giữ nguyên các bảng phí/lịch sử cũ. Lịch cũ chưa có bảng phí vẫn có thể chọn trong biểu mẫu để tạo bảng phí thủ công. Migration không khởi tạo chi phí hay công nợ lịch sử.
 
-**Kiểm tra bản cập nhật này:** build đã thành công. Đã bổ sung kiểm thử tự tạo/gộp bảng phí, rollback, quyền upload và lỗi tải ảnh; lệnh thực thi kiểm thử mới bị từ chối cấp quyền nên chưa có kết quả chạy cho bản 004. Các kết quả 68/68 phía dưới thuộc bản 003 trước thay đổi này, không phải bằng chứng bản 004 đã được nghiệm thu. Chưa kiểm chứng upload tệp thật hoặc Realtime hai danh tính sau khi áp dụng migration 004 trên Supabase.
+**Kiểm tra bản cập nhật này:** `npm run build` thành công và `npm test` đạt 199/199 trường hợp, gồm kiểm thử tự tạo/gộp bảng phí, rollback, quyền upload, xung đột biểu mẫu và xuất dữ liệu. Trước khi triển khai frontend mới, chạy [migration practical updates](../supabase/migrations/202611110003_practical_updates.sql) sau tài chính 003 và sau migration 004 nếu đã cài; migration này sửa giá trị `can_manage` về boolean, trả HTTP 409 cho xung đột nghiệp vụ và thêm API snapshot gộp. Kết quả tự động không chứng minh đã kiểm tra upload tệp thật hoặc Realtime giữa hai danh tính trên Supabase; các bước này vẫn cần nghiệm thu trực tiếp.
 
 ## Bật trên Supabase hiện tại
 
@@ -115,7 +115,7 @@ Mọi thay đổi phát tín hiệu qua `booking_sync` đã có trong publicatio
 
 ## Kiểm tra
 
-Kết quả bản **003 trước cập nhật 004**: **68/68** kiểm thử toàn dự án đạt, gồm **13** kiểm thử PostgreSQL/PGlite và **8** kiểm thử giao diện cho tài chính/du lịch. Build thành công. Bảng phí có 10 người được kiểm tra bố cục riêng ở 320/375/390/768/1024/1440px; không tràn ngang. Các kiểm thử không sửa dữ liệu nhóm. Kết quả này không bao gồm kiểm thử tự tạo bảng phí và upload ảnh mới ở bản 004; xem trạng thái bản cập nhật ở đầu tài liệu.
+Kết quả bản **003 trước cập nhật 004**: **68/68** kiểm thử toàn dự án đạt, gồm **13** kiểm thử PostgreSQL/PGlite và **8** kiểm thử giao diện cho tài chính/du lịch. Đây là kết quả lịch sử; lượt kiểm tra hiện tại đạt **199/199** kiểm thử toàn dự án và build thành công, bao gồm cả các thay đổi sau 004. Bảng phí có 10 người được kiểm tra bố cục riêng ở 320/375/390/768/1024/1440px; không tràn ngang. Các kiểm thử không sửa dữ liệu nhóm. Chưa nghiệm thu upload thật và đồng bộ hai thiết bị trên Supabase sau khi chạy các migration.
 
 `npm test` kiểm tra PostgreSQL cục bộ bằng PGlite và giao diện React với dữ liệu kiểm thử riêng, không ghi Supabase thật. `npm run build` kiểm tra TypeScript/build. `npm run check:finance-access` dùng các mục tiêu không tồn tại để kiểm tra quyền trên Supabase thật, không sửa dữ liệu nhóm.
 

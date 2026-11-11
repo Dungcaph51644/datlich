@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { configured, message, rpc, selectAll, supabase } from './lib';
 import { noteDrafts } from './drafts';
-import type { BookingData } from './bookingTypes';
-import type { ActivityData } from './activityTypes';
+import { loadClubSnapshots } from './clubTransport';
 import {
   EMPTY,
   type Account,
@@ -62,6 +61,7 @@ export function useClub() {
   const failedBatch = useRef(false);
   const sequence = useRef(0);
   const authIdentity = useRef<string | null>(null);
+  const appSnapshotCapability = useRef<boolean | null>(null);
 
   // Network state is useful even before a backend has been configured.
   useEffect(() => {
@@ -126,37 +126,8 @@ export function useClub() {
     }
     const seq = ++sequence.current;
     try {
-      const quick = await supabase.rpc('get_quick_snapshot');
-      if (quick.error && !['PGRST202', '42883'].includes(quick.error.code))
-        throw quick.error;
-      let snapshot = quick.error ? null : (quick.data as QuickSnapshot);
-      let booking: BookingData | null = null;
-      let bookingProblem = '';
-      let activities: ActivityData | null = null;
-      let activityProblem = '';
-      if (snapshot && snapshot.version >= 2) {
-        const result = await supabase.rpc('get_booking_snapshot', {
-          p_token: bookingTokenRef.current,
-        });
-        if (result.error) bookingProblem = message(result.error);
-        else {
-          booking = result.data as BookingData;
-          snapshot = booking.club;
-        }
-        if (booking && snapshot && snapshot.version >= 3) {
-          const result = await supabase.rpc('get_activity_snapshot', {
-            p_token: bookingTokenRef.current,
-          });
-          if (result.error) {
-            if (!['PGRST202', '42883'].includes(result.error.code))
-              activityProblem = message(result.error);
-          } else {
-            activities = result.data as ActivityData;
-            // Roster and draft amounts originate from the same SQL snapshot.
-            snapshot = activities.club ?? snapshot;
-          }
-        }
-      }
+      const { snapshot, booking, activities, bookingProblem, activityProblem } =
+        await loadClubSnapshots(supabase, bookingTokenRef.current, appSnapshotCapability);
       const sessions =
         snapshot?.sessions ??
         (await rpc<CourtSession[]>('get_public_schedule'));

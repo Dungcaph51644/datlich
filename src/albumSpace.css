@@ -1,0 +1,576 @@
+/* The original photo universe, adapted to the club's forest/lime palette.
+   Background effects stay separate from the preserved 3D camera and cards. */
+.album-space-stage {
+  min-height: 680px;
+  border: 1px solid #34513f;
+  border-radius: 25px;
+  background:
+    radial-gradient(ellipse at 50% 50%, #214c354f 0, transparent 48%),
+    radial-gradient(ellipse at 50% 100%, #273e294d 0, transparent 52%), #041511;
+  color: #edf4e6;
+  perspective: none;
+  overflow: clip;
+  touch-action: pan-y;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.album-space-stage:active {
+  cursor: grabbing;
+}
+.album-space-stage.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  touch-action: none;
+}
+.album-space-stage.is-expanded .album-flight-perspective,
+.album-space-stage.is-expanded .album-flight-photo {
+  touch-action: none;
+}
+.album-space-nebula {
+  position: absolute;
+  inset: -18%;
+  background:
+    radial-gradient(ellipse at 18% 37%, #497c4538 0, transparent 43%),
+    radial-gradient(ellipse at 83% 72%, #687b3230 0, transparent 42%),
+    radial-gradient(ellipse at 52% 45%, #29573f29 0, transparent 56%);
+  pointer-events: none;
+  animation: album-cosmic-nebula 32s ease-in-out infinite alternate;
+}
+.album-space-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.album-space-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #eef3e7;
+  box-shadow: 0 0 8px 1px #cfedb980;
+  animation: album-cosmic-star 6.5s ease-in-out infinite alternate;
+}
+.album-space-star:nth-child(5n) {
+  width: 3px;
+  height: 3px;
+  background: #e5edbb;
+  box-shadow: 0 0 12px 2px #d3f66b59;
+}
+.album-space-streak {
+  position: absolute;
+  top: 23%;
+  left: 72%;
+  width: clamp(5rem, 12vw, 10rem);
+  height: 1px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, #e9f5d9 56%, transparent);
+  filter: drop-shadow(0 0 4px #d3f66b70);
+  transform: rotate(-32deg) scaleX(0);
+  transform-origin: left center;
+  animation: album-cosmic-streak 10s ease-in-out infinite;
+}
+.album-space-streak + .album-space-streak,
+.album-space-streak.streak-two {
+  top: 68%;
+  left: 15%;
+  animation-delay: -5.2s;
+}
+.album-flight-intro {
+  position: absolute;
+  left: 27px;
+  top: 25px;
+  z-index: 4;
+  max-width: min(67%, 420px);
+  pointer-events: none;
+}
+.album-flight-intro > span:first-child,
+.album-flight-intro > small:first-child {
+  display: block;
+  color: #c9dfaa;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  line-height: 1.8;
+}
+.album-flight-intro > strong {
+  display: block;
+  margin: 9px 0 8px;
+  color: #f0f5e6;
+  font-size: clamp(22px, 2.6vw, 34px);
+  font-weight: 600;
+  letter-spacing: -1.3px;
+  line-height: 1.3;
+  text-shadow: 0 2px 19px #04151199;
+}
+.album-flight-intro > p,
+.album-flight-intro > small:last-child,
+.album-flight-intro > span:last-child {
+  color: #a0b69b;
+  font-size: 9px;
+  font-weight: 400;
+  line-height: 1.8;
+  letter-spacing: 0;
+}
+.album-flight-count {
+  position: absolute;
+  right: 25px;
+  top: 25px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border: 1px solid #d3e6c52b;
+  border-radius: 20px;
+  background: #09251bcc;
+  color: #b5c8a6;
+  font-size: 9px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+.album-flight-count strong {
+  color: #e2efce;
+  font-size: 12px;
+  font-weight: 700;
+}
+.album-space-tools {
+  position: absolute;
+  top: max(17px, env(safe-area-inset-top));
+  right: max(17px, env(safe-area-inset-right));
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.album-space-tools .album-flight-count {
+  position: static;
+}
+.album-space-tools > button,
+.album-space-zoom > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #d4e6c738;
+  border-radius: 50%;
+  background: #09251bd1;
+  color: #e0ecca;
+  touch-action: manipulation;
+}
+.album-space-tools > button:hover,
+.album-space-zoom > button:hover:not(:disabled) {
+  background: #234632;
+  color: #d3f66b;
+}
+.album-space-tools > button:focus-visible,
+.album-space-zoom > button:focus-visible {
+  outline: 3px solid #d3f66b;
+  outline-offset: 4px;
+}
+.album-flight-perspective {
+  position: absolute;
+  inset: 0;
+  perspective: 1050px;
+  perspective-origin: 50% 48%;
+  transform-style: preserve-3d;
+  overflow: visible;
+  filter: none;
+  opacity: 1;
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+.album-flight-camera {
+  position: absolute;
+  inset: 0;
+  transform: rotateX(var(--px, 0deg)) rotateY(var(--py, 0deg));
+  transform-style: preserve-3d;
+  overflow: visible;
+  filter: none;
+  opacity: 1;
+  pointer-events: none;
+}
+.album-flight-world {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  overflow: visible;
+  filter: none;
+  opacity: 1;
+  pointer-events: none;
+}
+.album-flight-slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(115px, 14vw, 178px);
+  aspect-ratio: 0.78;
+  transform-style: preserve-3d;
+  overflow: visible;
+  filter: none;
+  opacity: 1;
+  pointer-events: none;
+}
+.album-flight-photo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #e5eed8;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: pan-y;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  overflow: visible;
+  filter: none;
+  opacity: 1;
+  text-align: left;
+}
+.album-flight-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  border: 1px solid #dfebd270;
+  border-radius: 9px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    0 18px 34px #0006,
+    0 0 22px #c9ed9211;
+  transition:
+    opacity 0.65s ease,
+    border-color 0.2s ease;
+}
+.album-flight-front {
+  flex-direction: column;
+  padding: 5px 5px 0;
+  background: #f2f6eaf2;
+  color: #40523a;
+  transform: translateZ(0.8px);
+  overflow: hidden;
+}
+.album-flight-front > img {
+  display: block;
+  width: 100%;
+  height: 0;
+  min-height: 0;
+  flex: 1 1 0;
+  object-fit: cover;
+  border-radius: 5px;
+}
+.album-flight-front > span,
+.album-flight-front > figcaption {
+  display: block;
+  flex: 0 0 auto;
+  overflow: hidden;
+  padding: 9px 4px 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 8px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+.album-flight-back {
+  transform: rotateY(180deg) translateZ(0.8px);
+}
+.album-flight-photo:hover .album-flight-face {
+  border-color: #d3f66b;
+}
+.album-flight-photo:focus-visible {
+  outline: 3px solid #d3f66b;
+  outline-offset: 5px;
+}
+.album-space-stage.is-changing .album-flight-face {
+  opacity: 0;
+}
+.album-space-stage.is-moving .album-flight-world,
+.album-space-stage.is-moving .album-flight-slot,
+.album-space-stage.is-moving .album-flight-photo {
+  will-change: transform;
+}
+.album-space-stage.is-paused .album-flight-world,
+.album-space-stage.is-paused .album-flight-slot,
+.album-space-stage.is-paused .album-flight-photo {
+  will-change: auto;
+}
+.album-space-zoom {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  top: 50%;
+  z-index: 6;
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.3rem;
+  border: 1px solid #e1efd53d;
+  border-radius: 999px;
+  background: #081d16d1;
+  box-shadow:
+    0 8px 24px #00000052,
+    0 0 20px #b4d4770d;
+  backdrop-filter: blur(12px);
+  transform: translateY(-50%);
+}
+.album-space-zoom > button {
+  border: 0;
+  background: transparent;
+  font-size: 1.15rem;
+}
+.album-space-zoom > button:disabled {
+  opacity: 0.32;
+}
+.album-space-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: absolute;
+  bottom: 83px;
+  left: 50%;
+  z-index: 5;
+  width: max-content;
+  max-width: calc(100% - 2rem);
+  padding: 9px 15px;
+  border: 1px solid #e1efd51c;
+  border-radius: 999px;
+  background: #061a13b8;
+  color: #bdcdb0;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.7;
+  backdrop-filter: blur(9px);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.album-space-stage .album-float-controls {
+  position: absolute;
+  bottom: 0;
+  z-index: 7;
+  min-height: 59px;
+  padding: 13px 21px max(13px, env(safe-area-inset-bottom));
+  gap: 12px;
+  border-top: 1px solid #d7e5c91c;
+  background: #061c15eb;
+}
+.album-space-stage .album-float-controls > span {
+  color: #a1b797;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.album-space-stage .album-float-controls button {
+  min-height: 44px;
+  padding: 8px 11px;
+  border: 1px solid #c7dba639;
+  border-radius: 9px;
+  background: #d3f66b0a;
+  color: #d9eabf;
+  font-size: 9px;
+  font-weight: 600;
+  gap: 6px;
+  white-space: nowrap;
+}
+.album-space-stage .album-float-controls button:hover:not(:disabled) {
+  background: #d3f66b1c;
+}
+.album-space-stage .album-float-controls button:focus-visible {
+  outline: 3px solid #d3f66b;
+  outline-offset: 4px;
+}
+.album-space-stage.is-paused .album-space-nebula,
+.album-space-stage.is-paused .album-space-star,
+.album-space-stage.is-paused .album-space-streak {
+  animation-play-state: paused !important;
+}
+@keyframes album-cosmic-nebula {
+  from {
+    transform: translate3d(-1.5%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 1.5%, 0) scale(1.08);
+  }
+}
+@keyframes album-cosmic-star {
+  from {
+    transform: scale(0.7);
+  }
+  to {
+    transform: scale(1.15);
+    opacity: 0.24;
+  }
+}
+@keyframes album-cosmic-streak {
+  0%,
+  72%,
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(-32deg) scaleX(0);
+  }
+  76% {
+    opacity: 0.7;
+    transform: translate3d(-18px, 11px, 0) rotate(-32deg) scaleX(1);
+  }
+  84% {
+    opacity: 0;
+    transform: translate3d(-130px, 81px, 0) rotate(-32deg) scaleX(0.35);
+  }
+}
+@media (max-width: 900px) {
+  .album-space-stage {
+    min-height: 660px;
+  }
+  .album-flight-intro > strong {
+    font-size: 27px;
+  }
+}
+@media (max-width: 700px) {
+  .album-space-stage {
+    min-height: 640px;
+    border-radius: 18px;
+  }
+  .album-space-stage.is-expanded {
+    min-height: 0;
+    border-radius: 0;
+  }
+  .album-flight-intro {
+    top: max(20px, env(safe-area-inset-top));
+    left: 17px;
+    max-width: 65%;
+  }
+  .album-flight-intro > span:first-child,
+  .album-flight-intro > small:first-child {
+    font-size: 6px;
+    letter-spacing: 1.3px;
+  }
+  .album-flight-intro > strong {
+    font-size: 23px;
+    letter-spacing: -0.8px;
+    margin: 8px 0 6px;
+  }
+  .album-flight-intro > p,
+  .album-flight-intro > small:last-child,
+  .album-flight-intro > span:last-child {
+    font-size: 8px;
+  }
+  .album-space-tools {
+    top: max(14px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    gap: 5px;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+  }
+  .album-flight-count {
+    top: 18px;
+    right: 15px;
+    padding: 7px 9px;
+    font-size: 8px;
+  }
+  .album-flight-slot {
+    width: clamp(108px, 27vw, 140px);
+    aspect-ratio: 0.78;
+  }
+  .album-flight-face {
+    border-radius: 7px;
+  }
+  .album-flight-front {
+    padding: 4px 4px 0;
+  }
+  .album-flight-front > img {
+    border-radius: 4px;
+  }
+  .album-flight-front > span,
+  .album-flight-front > figcaption {
+    padding: 7px 2px 8px;
+    font-size: 7px;
+  }
+  .album-space-zoom {
+    right: max(10px, env(safe-area-inset-right));
+    padding: 0.2rem;
+    backdrop-filter: none;
+  }
+  .album-space-hint {
+    bottom: calc(85px + env(safe-area-inset-bottom));
+    padding: 8px 12px;
+    font-size: 0.6rem;
+    backdrop-filter: none;
+  }
+  .album-space-stage .album-float-controls {
+    min-height: 59px;
+    padding: 11px 12px max(11px, env(safe-area-inset-bottom));
+    gap: 8px;
+  }
+  .album-space-stage .album-float-controls > span {
+    font-size: 7px;
+    max-width: 55%;
+  }
+  .album-space-stage .album-float-controls button {
+    min-height: 35px;
+    gap: 5px;
+    padding: 8px;
+    font-size: 8px;
+  }
+}
+@media (max-width: 380px) {
+  .album-flight-intro > strong {
+    font-size: 21px;
+  }
+  .album-flight-count {
+    font-size: 7px;
+  }
+  .album-space-hint {
+    font-size: 0.57rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .album-space-stage .album-space-nebula,
+  .album-space-stage .album-space-star,
+  .album-space-stage .album-space-streak {
+    animation-play-state: paused !important;
+  }
+  .album-space-stage .album-flight-face {
+    transition: none;
+  }
+  .album-space-stage .album-flight-world,
+  .album-space-stage .album-flight-slot,
+  .album-space-stage .album-flight-photo {
+    will-change: auto;
+  }
+}
+[data-motion='reduced'] .album-space-stage .album-space-nebula,
+[data-motion='reduced'] .album-space-stage .album-space-star,
+[data-motion='reduced'] .album-space-stage .album-space-streak {
+  animation-play-state: paused !important;
+}
+[data-motion='reduced'] .album-space-stage .album-flight-face {
+  transition: none;
+}
+[data-motion='reduced'] .album-space-stage .album-flight-world,
+[data-motion='reduced'] .album-space-stage .album-flight-slot,
+[data-motion='reduced'] .album-space-stage .album-flight-photo {
+  will-change: auto;
+}

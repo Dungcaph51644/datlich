@@ -7,6 +7,9 @@ import './fonts.css';
 import './sport.css';
 import './booking.css';
 import './activities.css';
+import './teamAlbum.css';
+import './albumSpace.css';
+import './albumLightbox.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

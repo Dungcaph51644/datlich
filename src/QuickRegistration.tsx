@@ -23,6 +23,7 @@ import {
   type CourtSession,
 } from './types';
 import type { useClub } from './useClub';
+import { matchesSearch } from './search';
 
 type Club = ReturnType<typeof useClub>;
 export function MemberPicker({
@@ -59,9 +60,7 @@ export function MemberPicker({
           .filter(
             (m) =>
               m.active &&
-              `${m.display_name} ${m.code}`
-                .toLocaleLowerCase('vi')
-                .includes(query.toLocaleLowerCase('vi')),
+              matchesSearch(`${m.display_name} ${m.code}`, query),
           )
           .map((m) => (
             <button
@@ -91,9 +90,7 @@ export function MemberPicker({
         !club.members.some(
           (m) =>
             m.active &&
-            `${m.display_name} ${m.code}`
-              .toLocaleLowerCase('vi')
-              .includes(query.toLocaleLowerCase('vi')),
+            matchesSearch(`${m.display_name} ${m.code}`, query),
         ) && (
           <p className="form-help">
             Không thấy tên phù hợp. Nhờ quản trị viên thêm bạn vào nhóm.

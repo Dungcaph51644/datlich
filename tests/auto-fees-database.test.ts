@@ -24,6 +24,13 @@ test('Automatic fee sheets: atomic schedule creation, pristine grouping, audit a
       sql.includes('-- STORAGE:')
     )
       await db.exec('commit');
+    if (name === '202611100004_auto_fees_and_covers.sql') {
+      const upgrade = await readFile(
+        new URL('../supabase/migrations/202611110003_practical_updates.sql', import.meta.url),
+        'utf8',
+      );
+      await db.exec(upgrade);
+    }
   }
   for (const name of [
     '202611090001_initial.sql',
@@ -137,6 +144,11 @@ test('Automatic fee sheets: atomic schedule creation, pristine grouping, audit a
     ]);
   }
   await asAdmin();
+
+  // Each scenario starts and finishes in its own known actor context, including
+  // failures; one assertion must not turn the following test into a guest.
+  t.beforeEach(async () => { await asAdmin(); });
+  t.afterEach(async () => { await asAdmin(); });
   const legacyEmpty = await session('Lịch cũ chưa có bảng phí');
   const legacyLinked = await session('Lịch cũ đã có bảng phí');
   const legacyFee = await combine([legacyLinked]);
@@ -163,6 +175,17 @@ test('Automatic fee sheets: atomic schedule creation, pristine grouping, audit a
       await migrate(migration);
       await asAdmin();
       assert.deepEqual((await snap()).activities, before.activities);
+      const upgraded = await call('get_app_snapshot', [null]);
+      assert.equal(upgraded.practical_updates, true);
+      assert.deepEqual(upgraded.club, before.club);
+      assert.deepEqual(upgraded.activities.activities, before.activities);
+      assert.equal('club' in upgraded.activities, false, 'Do not transfer duplicate club payloads');
+      const definitions = await ownerQuery<{ definition: string }>(
+        "select pg_get_functiondef(p.oid) definition from pg_proc p join pg_namespace n on n.oid=p.pronamespace where (n.nspname='public' and p.proname in ('save_member','save_activity_expense','set_activity_fee_state')) or (n.nspname='private' and p.proname in ('write_attendance','write_booking_session','finance_version'))",
+      );
+      assert.ok(definitions.length >= 6);
+      assert.ok(definitions.every((row) => !/errcode\s*=\s*'40001'/i.test(row.definition)));
+      assert.ok(definitions.some((row) => /PT409/.test(row.definition)));
     },
   );
 

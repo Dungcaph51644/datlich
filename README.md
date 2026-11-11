@@ -2,9 +2,17 @@
 
 React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: **mở link → chọn tên → bấm Đi**. Phân công CS, tài chính và du lịch dùng danh tính đã xác minh bằng mã cá nhân hoặc tài khoản Supabase Auth.
 
+## Album đội
+
+Album chung có chế độ ảnh bay chậm/dừng chuyển động và lưới, xem ảnh lớn/vuốt/phóng to/tải ảnh, chọn nhiều file/kéo thả, chú thích và Thùng rác. Mọi khách đều quản lý được album; quyền lịch đánh và tài chính giữ nguyên. Ảnh gốc và thumbnail lưu trong Supabase Storage, metadata lưu PostgreSQL và đồng bộ qua Realtime riêng.
+
+Chạy [migration Album đội](./supabase/migrations/202611110001_team_album.sql) trong Supabase SQL Editor rồi triển khai lại frontend. Dùng URL/key đang có, không thêm khóa bí mật. Mở trực tiếp `/#album` để vào album mà không cần chọn tên. Xem [cấu hình và nghiệm thu Album đội](./docs/team-album.md), kiểm tra backend chỉ đọc bằng `npm run check:album-access`. Không có ảnh mẫu hoặc dữ liệu đồng bộ giả.
+
+Nếu đã cài album trước bản sửa xung đột, chạy tiếp [bản sửa HTTP 409](./supabase/migrations/202611110002_album_conflict_http.sql) để yêu cầu sửa từ phiên bản cũ trả thông báo ngay, tránh vòng lặp thử lại của PostgREST. Bản sửa giữ nguyên ảnh và dữ liệu.
+
 ## Tiền sân, thanh toán và du lịch
 
-**Cập nhật thao tác nhanh:** chạy [migration 004](./supabase/migrations/202611100004_auto_fees_and_covers.sql) sau bản tài chính 003 để lịch mới tự có bảng phí trống và chọn ảnh bìa trực tiếp từ thiết bị. Bucket ảnh và quyền upload được tạo trong cùng migration; không cần thêm khóa bí mật. Xem [hướng dẫn cập nhật](./docs/finance-travel.md#cập-nhật-lịch-tự-có-bảng-phí-và-chọn-ảnh-từ-thiết-bị). Build đã qua; kiểm thử mới chưa chạy do yêu cầu thực thi bị từ chối cấp quyền. Kết quả 68/68 bên dưới thuộc bản 003 trước cập nhật này.
+**Cập nhật thao tác nhanh:** chạy [migration 004](./supabase/migrations/202611100004_auto_fees_and_covers.sql) sau bản tài chính 003 để lịch mới tự có bảng phí trống và chọn ảnh bìa trực tiếp từ thiết bị. Bucket ảnh và quyền upload được tạo trong cùng migration; không cần thêm khóa bí mật. Sau đó chạy [migration cập nhật thực tế](./supabase/migrations/202611110003_practical_updates.sql) để chuẩn hóa quyền `can_manage`, xử lý xung đột phiên bản bằng HTTP 409 và dùng snapshot gộp. Xem [hướng dẫn cập nhật](./docs/finance-travel.md#cập-nhật-lịch-tự-có-bảng-phí-và-chọn-ảnh-từ-thiết-bị). Kiểm tra hiện tại: build đạt và `npm test` đạt 199/199; chưa nghiệm thu upload thật hoặc đồng bộ hai thiết bị trên Supabase sau migration.
 
 Đã bổ sung chia tiền theo từng nhóm ca/sân, xác nhận người chịu phí, chốt/mở lại bảng phí, thu/hoàn thủ công có lịch sử; chuyến đi có khách, suất chia, dự toán/thực tế, tiền ứng và danh sách chuẩn bị.
 
@@ -150,6 +158,7 @@ Không thêm thư viện animation. Font Be Vietnam Pro được lưu tại dự
 
 ## Kiểm thử
 
+- Kiểm tra hiện tại: `npm test` đạt **199/199** trường hợp; `npm run build` thành công. Đây là kiểm thử cục bộ, không thay thế nghiệm thu hai danh tính/thiết bị trên Supabase thật.
 - PostgreSQL/PGlite: 15 kiểm thử đạt, gồm nâng cấp từ database có dữ liệu, bảo toàn lịch sử, đăng ký không email, giới hạn chỗ, xung đột, kết quả riêng từng ca, quyền quản trị và mẫu lịch.
 - React/JSDOM: 8 kiểm thử đạt, gồm chọn mã khi trùng tên, chờ xác nhận máy chủ, tự lưu, giữ bản nháp sau lỗi/rời ô, xung đột, phục hồi offline, nhiều ô cùng ghi chú gửi lần lượt. Phản hồi máy chủ có kiểm soát phục vụ kiểm tra thời điểm; đây không phải bằng chứng Realtime trên Supabase thật.
 - Trình duyệt với Supabase hiện tại: đã tải được lịch, danh sách thật và API đăng ký nhanh. Trang lịch, thành viên, chọn tên và chi tiết đăng ký không tràn ngang ở 320/390/768/1440px; trang lịch kiểm tra thêm 375/1024px. Đã kiểm tra tìm thành viên, chuyển tuần, nhớ tên sau tải lại, bật/tắt hiệu ứng và nhớ lựa chọn sau tải lại, chế độ giảm chuyển động của hệ điều hành. Không có lỗi JavaScript trong lượt kiểm tra tải lại trang. Lượt làm mới giao diện chỉ đọc dữ liệu thật, không sửa đăng ký của nhóm.

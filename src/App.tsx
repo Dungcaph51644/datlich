@@ -15,11 +15,13 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleCheck,
+  ClipboardList,
   Clock3,
   Copy,
   Edit3,
   History,
   Info,
+  Images,
   LayoutGrid,
   LoaderCircle,
   LogIn,
@@ -84,12 +86,19 @@ import {
   useMotionPreference,
   useSportMotion,
 } from './SportUI';
+import { navigateRoute, routeMonday, routeUrl, useAppRoute, type AppPage } from './navigation';
+import { matchesSearch } from './search';
+import { copyText } from './userActions';
+import { MyTasks } from './MyTasks';
+import './myTasks.css';
+import { mergeConflictFields, memberFormValues, sessionFormValues, VersionConflict } from './VersionConflict';
 
 const ActivitiesPage = lazy(() =>
   import('./ActivityFeatures').then((module) => ({
     default: module.ActivitiesPage,
   })),
 );
+const TeamAlbumPage = lazy(() => import('./TeamAlbumPage'));
 type Club = ReturnType<typeof useClub>;
 type ModalState =
   | { type: 'login' }
@@ -106,15 +115,20 @@ const shortTime = (t: string) => t.slice(0, 5);
 
 export default function App() {
   const club = useClub();
-  const [page, setPage] = useState<
-    'schedule' | 'members' | 'history' | 'booking' | 'finance' | 'travel'
-  >('schedule');
-  const [week, setWeek] = useState(0);
+  const [route] = useAppRoute();
+  const page = route.page;
+  const setPage = (value: AppPage) => navigateRoute({ page: value });
+  const week = route.week
+    ? Math.round((new Date(route.week + 'T12:00:00').getTime() - monday().getTime()) / 604800000)
+    : 0;
+  const setWeek = (value: number) => navigateRoute({ page: 'schedule', week: dateKey(monday(value)), day: undefined, session: undefined });
   const [modal, setModal] = useState<ModalState>(null);
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [day, setDay] = useState<string | null>(null);
+  const day = route.day ?? null;
+  const setDay = (value: string | null) => navigateRoute({ page: 'schedule', day: value ?? undefined });
+  const [sessionFilter, setSessionFilter] = useState<'all' | 'pending' | 'going'>('all');
   const [motionEnabled, setMotionEnabled] = useMotionPreference();
   useSportMotion(page, week, motionEnabled);
   const isAdmin = club.account?.role === 'admin';
@@ -122,6 +136,7 @@ export default function App() {
   const askedIdentity = useRef(false);
   useEffect(() => {
     if (
+      page === 'schedule' &&
       club.quickReady &&
       !club.loading &&
       !club.me &&
@@ -131,19 +146,41 @@ export default function App() {
       askedIdentity.current = true;
       setModal({ type: 'choose' });
     }
-  }, [club.quickReady, club.loading, club.me, modal]);
+  }, [page, club.quickReady, club.loading, club.me, modal]);
   const start = monday(week),
     end = addDays(start, 6);
   const inWeek = club.sessions.filter(
     (s) => s.session_date >= dateKey(start) && s.session_date <= dateKey(end),
   );
-  const shown = inWeek.filter((s) => !day || s.session_date === day);
+  const pendingSessions = inWeek.filter((s) => !registrationClosed(s, isAdmin) && club.roster.some((r) => r.session_id === s.id && r.member_id === club.memberId) && !club.attendance.some((a) => a.session_id === s.id && a.member_id === club.memberId && a.status !== 'unanswered'));
+  const goingSessions = inWeek.filter((s) => club.attendance.some((a) => a.session_id === s.id && a.member_id === club.memberId && a.status === 'going'));
+  const shown = inWeek.filter((s) => (!day || s.session_date === day) && (sessionFilter === 'all' || (sessionFilter === 'pending' ? pendingSessions : goingSessions).some((row) => row.id === s.id)));
   const next = club.sessions.find(
     (s) =>
       s.booking_status !== 'cancelled' &&
       new Date(`${s.session_date}T${s.end_time}+07:00`) > new Date(),
   );
   const busy = club.saveState === 'saving' || !club.online || !configured;
+  const handledSessionRoute = useRef<string | null>(null);
+  useEffect(() => {
+    const id = page === 'schedule' ? route.session : undefined;
+    if (!id) {
+      if (handledSessionRoute.current) setModal(null);
+      handledSessionRoute.current = null;
+      return;
+    }
+    if (handledSessionRoute.current === id || club.loading) return;
+    const session = club.sessions.find((s) => s.id === id);
+    if (session) {
+      handledSessionRoute.current = id;
+      setModal({ type: 'attendance', session });
+    }
+  }, [page, route.session, club.loading, club.sessions]);
+  const openAttendance = (session: CourtSession) => navigateRoute({ page: 'schedule', week: routeMonday(session.session_date), day: undefined, session: session.id });
+  const closeModal = () => {
+    setModal(null);
+    if (route.session) navigateRoute({ session: undefined });
+  };
   function register(session?: CourtSession) {
     if (!club.memberId && club.quickReady) setModal({ type: 'choose' });
     else if (!club.quickReady && !club.account) setModal({ type: 'login' });
@@ -201,6 +238,15 @@ export default function App() {
               Lịch đánh cầu
             </button>
             <button
+              className={page === 'tasks' ? 'active' : ''}
+              onClick={() => {
+                setPage('tasks');
+                setMobileMenu(false);
+              }}
+            >
+              <ClipboardList size={17} /> Việc của tôi
+            </button>
+            <button
               className={page === 'members' ? 'active' : ''}
               onClick={() => {
                 setPage('members');
@@ -255,6 +301,16 @@ export default function App() {
               }}
             >
               <Mountain size={17} /> Du lịch & sự kiện
+            </button>
+            <button
+              className={page === 'album' ? 'active' : ''}
+              onClick={() => {
+                setPage('album');
+                setMobileMenu(false);
+                if (modal?.type === 'choose') setModal(null);
+              }}
+            >
+              <Images size={17} /> Album đội
             </button>
             <button
               className="mobile-admin-btn"
@@ -328,70 +384,81 @@ export default function App() {
       </header>
 
       <main data-page={page}>
-        <div className="topline">
-          <span>
-            <span className="tiny-dot" /> HẸN NHAU TRÊN SÂN
-          </span>
-          <Connection club={club} />
-        </div>
-        {!configured && (
-          <div className="alert setup">
-            <Info size={19} />
-            <div>
-              <strong>Chưa kết nối cơ sở dữ liệu</strong>
+        {page !== 'album' && (
+          <>
+            <div className="topline">
               <span>
-                Giao diện đã sẵn sàng. Cấu hình Supabase theo README để dùng
-                lịch chung, đăng nhập và đồng bộ thời gian thực.
+                <span className="tiny-dot" /> HẸN NHAU TRÊN SÂN
               </span>
+              <Connection club={club} />
             </div>
-          </div>
-        )}
-        {!club.online && (
-          <div className="alert danger">
-            <WifiOff size={19} />
-            Mất kết nối mạng. Bạn đang xem dữ liệu gần nhất; các thao tác lưu
-            tạm thời bị khóa.
-          </div>
-        )}
-        {club.error && (
-          <div className="alert danger">
-            <Info size={19} />
-            <div>
-              <strong>Không tải được dữ liệu mới nhất</strong>
-              <span>{club.error}</span>
-            </div>
-            <button className="text-btn" onClick={() => void club.reload()}>
-              Thử lại
-            </button>
-          </div>
-        )}
-        {configured && !club.quickReady && !club.loading && !club.error && (
-          <div className="alert">
-            <Info size={19} />
-            <div>
-              <strong>Chưa bật đăng ký nhanh</strong>
-              <span>
-                Quản trị viên cần chạy bản cập nhật cơ sở dữ liệu mới. Lịch hiện
-                có vẫn được giữ nguyên.
-              </span>
-            </div>
-          </div>
-        )}
-        {club.user && !club.account && !club.loading && (
-          <div className="alert">
-            <ShieldCheck size={19} />
-            <div>
-              <strong>Email này chưa có quyền quản trị</strong>
-              <span>
-                Bạn vẫn có thể chọn tên để đăng ký nhanh. Chủ nhóm cấp quyền
-                quản trị riêng cho email này nếu cần.
-              </span>
-            </div>
-          </div>
+            {club.me && club.booking?.verified_member_id && club.me.id !== club.booking.verified_member_id && (
+              <div className="identity-clarity" role="status">
+                <div><strong>Đăng ký đánh cầu: {club.me.display_name}</strong><span>Danh tính đã xác minh: {club.members.find((m) => m.id === club.booking?.verified_member_id)?.display_name ?? 'Thành viên khác'}. Hai tên hiện khác nhau.</span></div>
+                <button className="btn btn-soft" onClick={() => club.chooseMember(club.booking!.verified_member_id!)}>Dùng tên đã xác minh</button>
+              </div>
+            )}
+            {!configured && (
+              <div className="alert setup">
+                <Info size={19} />
+                <div>
+                  <strong>Chưa kết nối cơ sở dữ liệu</strong>
+                  <span>
+                    Giao diện đã sẵn sàng. Cấu hình Supabase theo README để dùng
+                    lịch chung, đăng nhập và đồng bộ thời gian thực.
+                  </span>
+                </div>
+              </div>
+            )}
+            {!club.online && (
+              <div className="alert danger">
+                <WifiOff size={19} />
+                Mất kết nối mạng. Bạn đang xem dữ liệu gần nhất; các thao tác
+                lưu tạm thời bị khóa.
+              </div>
+            )}
+            {club.error && (
+              <div className="alert danger">
+                <Info size={19} />
+                <div>
+                  <strong>Không tải được dữ liệu mới nhất</strong>
+                  <span>{club.error}</span>
+                </div>
+                <button className="text-btn" onClick={() => void club.reload()}>
+                  Thử lại
+                </button>
+              </div>
+            )}
+            {configured && !club.quickReady && !club.loading && !club.error && (
+              <div className="alert">
+                <Info size={19} />
+                <div>
+                  <strong>Chưa bật đăng ký nhanh</strong>
+                  <span>
+                    Quản trị viên cần chạy bản cập nhật cơ sở dữ liệu mới. Lịch
+                    hiện có vẫn được giữ nguyên.
+                  </span>
+                </div>
+              </div>
+            )}
+            {club.user && !club.account && !club.loading && (
+              <div className="alert">
+                <ShieldCheck size={19} />
+                <div>
+                  <strong>Email này chưa có quyền quản trị</strong>
+                  <span>
+                    Bạn vẫn có thể chọn tên để đăng ký nhanh. Chủ nhóm cấp quyền
+                    quản trị riêng cho email này nếu cần.
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {page === 'schedule' && (
           <>
+            {route.session && !club.loading && !club.error && !club.sessions.some((s) => s.id === route.session) && <div className="alert" role="status">Buổi đánh trong liên kết không còn tồn tại hoặc chưa tải được. <button className="text-btn" onClick={() => navigateRoute({ session: undefined })}>Về lịch tuần</button></div>}
             <section
               className="hero-grid"
               aria-label="Lên sân cùng những người bạn"
@@ -474,7 +541,7 @@ export default function App() {
                     <button
                       className="text-btn full"
                       onClick={() =>
-                        setModal({ type: 'attendance', session: next })
+                        openAttendance(next)
                       }
                     >
                       Danh sách & chi tiết <ArrowRight size={15} />
@@ -637,6 +704,9 @@ export default function App() {
                 club={club}
                 onChoose={() => setModal({ type: 'choose' })}
               />
+              {club.me && <div className="filter-row personal-session-filters" aria-label="Lọc lịch của tôi">{([
+                ['all', 'Tất cả', inWeek.length], ['pending', 'Chờ tôi phản hồi', pendingSessions.length], ['going', 'Buổi tôi đi', goingSessions.length],
+              ] as const).map(([value, label, count]) => <button key={value} aria-pressed={sessionFilter === value} className={sessionFilter === value ? 'selected' : ''} onClick={() => setSessionFilter(value)}>{label} <small>{count}</small></button>)}</div>}
               {club.loading ? (
                 <div className="empty-state">
                   <LoaderCircle className="spin" />
@@ -649,7 +719,7 @@ export default function App() {
                       key={session.id}
                       session={session}
                       club={club}
-                      onOpen={() => setModal({ type: 'attendance', session })}
+                      onOpen={() => openAttendance(session)}
                       onChoose={() => setModal({ type: 'choose' })}
                       onEdit={() =>
                         setModal({
@@ -666,16 +736,21 @@ export default function App() {
                     <CalendarDays size={27} />
                   </div>
                   <h3>
-                    {day
+                    {sessionFilter !== 'all'
+                      ? sessionFilter === 'pending' ? 'Bạn đã phản hồi các buổi phù hợp' : 'Chưa có buổi nào bạn chọn Đi'
+                      : day
                       ? 'Ngày này chưa có lịch đánh'
                       : 'Tuần này còn trống, lên lịch thôi!'}
                   </h3>
                   <p>
-                    {isAdmin
+                    {sessionFilter !== 'all'
+                      ? 'Chọn Tất cả để xem đầy đủ lịch của tuần, hoặc đổi ngày đang lọc.'
+                      : isAdmin
                       ? 'Tạo buổi mới hoặc sao chép lịch từ tuần trước. Mỗi ca / sân có danh sách đăng ký riêng.'
                       : 'Một buổi cầu vui đang chờ phía trước. Lịch sẽ được cập nhật tại đây.'}
                   </p>
-                  {isAdmin && (
+                  {sessionFilter !== 'all' && <button className="btn btn-soft" onClick={() => { setSessionFilter('all'); setDay(null); }}>Xem tất cả lịch tuần</button>}
+                  {isAdmin && sessionFilter === 'all' && (
                     <button
                       className="text-btn"
                       onClick={() => setModal({ type: 'session' })}
@@ -702,7 +777,19 @@ export default function App() {
           </>
         )}
 
+        {page === 'tasks' && <MyTasks club={club} onChoose={() => setModal({ type: 'choose' })} onOpenSession={openAttendance} />}
         {page === 'booking' && <BookingPage club={club} />}
+        {page === 'album' && (
+          <Suspense
+            fallback={
+              <div className="activity-empty" role="status">
+                Đang mở Album đội…
+              </div>
+            }
+          >
+            <TeamAlbumPage motionEnabled={motionEnabled} />
+          </Suspense>
+        )}
         {(page === 'finance' || page === 'travel') && (
           <Suspense
             fallback={
@@ -769,9 +856,7 @@ export default function App() {
                     .filter(
                       (m) =>
                         (showInactive || m.active) &&
-                        `${m.display_name} ${m.code}`
-                          .toLocaleLowerCase('vi')
-                          .includes(search.toLocaleLowerCase('vi')),
+                        matchesSearch(`${m.display_name} ${m.code}`, search),
                     )
                     .map((member, i) => (
                       <article
@@ -817,9 +902,7 @@ export default function App() {
                 {!club.members.some(
                   (m) =>
                     (showInactive || m.active) &&
-                    `${m.display_name} ${m.code}`
-                      .toLocaleLowerCase('vi')
-                      .includes(search.toLocaleLowerCase('vi')),
+                    matchesSearch(`${m.display_name} ${m.code}`, search),
                 ) && (
                   <div className="empty-state">
                     <Search />
@@ -986,7 +1069,7 @@ export default function App() {
             modal.type === 'session' ||
             modal.type === 'booking-session'
           }
-          onClose={() => setModal(null)}
+          onClose={closeModal}
           locked={club.saveState === 'saving'}
         >
           {modal.type === 'choose' && (
@@ -994,7 +1077,8 @@ export default function App() {
               <MemberPicker
                 club={club}
                 onDone={() => {
-                  setModal(null);
+                  const session = club.sessions.find((s) => s.id === route.session);
+                  setModal(session ? { type: 'attendance', session } : null);
                   requestAnimationFrame(() =>
                     scrollToClubSection('next-registration', 'center'),
                   );
@@ -1019,7 +1103,7 @@ export default function App() {
             <BookingSessionEditor
               session={modal.session}
               club={club}
-              close={() => setModal(null)}
+              close={closeModal}
             />
           )}
           {(modal.type === 'booking-session' ||
@@ -1029,7 +1113,7 @@ export default function App() {
             <MemberForm
               member={modal.member}
               club={club}
-              close={() => setModal(null)}
+              close={closeModal}
             />
           )}
           {modal.type === 'session' && isAdmin && (
@@ -1037,7 +1121,7 @@ export default function App() {
               session={modal.session}
               club={club}
               defaultDate={day ?? dateKey(week === 0 ? vietnamToday() : start)}
-              close={() => setModal(null)}
+              close={closeModal}
             />
           )}
           {modal.type === 'attendance' && (
@@ -1222,6 +1306,7 @@ function SessionCard({
         </a>
       )}
       <SessionResponsibility session={s} compact />
+      <SessionShareActions session={s} club={club} />
       {s.note && <p className="session-note">{s.note}</p>}
       <div className="session-bottom">
         <div>
@@ -1251,6 +1336,32 @@ function SessionCard({
       )}
     </article>
   );
+}
+
+function SessionShareActions({ session, club }: { session: CourtSession; club: Club }) {
+  const [copying, setCopying] = useState(false);
+  const url = routeUrl({ page: 'schedule', week: routeMonday(session.session_date), session: session.id });
+  async function copy(kind: 'link' | 'message') {
+    setCopying(true);
+    try {
+      const text = kind === 'link' ? url : [
+        '🏸 Cầu lông và những người bạn',
+        formatDate(session.session_date) + ' · ' + shortTime(session.start_time) + '–' + shortTime(session.end_time),
+        session.venue + ' · ' + session.court,
+        session.address,
+        'Phụ trách: ' + (session.organizer_name || 'Chưa phân công') + ' · ' + BOOKING_LABELS[session.booking_status],
+        'Đã đăng ký: ' + summary(session, club.roster, club.attendance).going + (session.max_players ? '/' + session.max_players : '') + ' người',
+        session.maps_url ? 'Bản đồ: ' + session.maps_url : '',
+        session.note,
+        'Xem lịch và xác nhận tham gia: ' + url,
+      ].filter(Boolean).join('\n');
+      await copyText(text);
+      club.setNotice(kind === 'link' ? 'Đã sao chép liên kết buổi đánh' : 'Đã sao chép nội dung, bạn có thể dán vào nhóm Zalo');
+    } catch (error) {
+      club.setNotice(message(error));
+    } finally { setCopying(false); }
+  }
+  return <div className="session-share-actions"><button type="button" className="btn btn-soft" disabled={copying} onClick={() => void copy('link')}><Copy size={14} /> Sao chép link</button><button type="button" className="btn btn-soft" disabled={copying} onClick={() => void copy('message')}><Users size={14} /> Nội dung gửi nhóm</button></div>;
 }
 
 function LoginForm() {
@@ -1379,7 +1490,7 @@ function LoginForm() {
 }
 
 function MemberForm({
-  member,
+  member: initialMember,
   club,
   close,
 }: {
@@ -1387,8 +1498,19 @@ function MemberForm({
   club: Club;
   close: () => void;
 }) {
+  const [member, setMember] = useState(initialMember);
+  const formRef = useRef<HTMLFormElement>(null);
+  const latest = member && club.members.find((m) => m.id === member.id);
+  const conflict = !!member && !!latest && member.version !== latest.version;
+  const removed = !!member && !club.loading && !latest;
+  function resolveConflict(keepDraft: boolean) {
+    if (!member || !latest || !formRef.current) return;
+    mergeConflictFields(formRef.current, memberFormValues(member), memberFormValues(latest), keepDraft);
+    setMember(latest);
+  }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (conflict || removed) return;
     const fd = new FormData(e.currentTarget);
     const values = {
       display_name: String(fd.get('display_name')).trim(),
@@ -1416,7 +1538,9 @@ function MemberForm({
       close();
   }
   return (
-    <form onSubmit={(e) => void submit(e)}>
+    <form ref={formRef} onSubmit={(e) => void submit(e)}>
+      {conflict && <VersionConflict before={memberFormValues(member!)} latest={memberFormValues(latest!)} onKeepDraft={() => resolveConflict(true)} onUseLatest={() => resolveConflict(false)} />}
+      {removed && <div className="alert danger" role="alert">Thành viên đã được xóa trên thiết bị khác. Nội dung bạn nhập vẫn còn trong biểu mẫu; hãy sao chép trước khi đóng.</div>}
       <p className="form-intro">
         {member
           ? `Mã thành viên ${member.code} không thay đổi khi sửa tên.`
@@ -1458,7 +1582,7 @@ function MemberForm({
           <button
             type="button"
             className="btn btn-danger"
-            disabled={club.saveState === 'saving' || !club.online}
+            disabled={club.saveState === 'saving' || !club.online || conflict || removed}
             onClick={async () => {
               if (
                 window.confirm(
@@ -1482,7 +1606,7 @@ function MemberForm({
         )}
         <button
           className="btn btn-dark"
-          disabled={club.saveState === 'saving' || !club.online}
+          disabled={club.saveState === 'saving' || !club.online || conflict || removed}
         >
           <Check size={17} />
           {club.saveState === 'saving' ? 'Đang lưu…' : 'Lưu thành viên'}
@@ -1493,7 +1617,7 @@ function MemberForm({
 }
 
 function SessionForm({
-  session: original,
+  session: initialSession,
   club,
   defaultDate,
   close,
@@ -1503,6 +1627,11 @@ function SessionForm({
   defaultDate: string;
   close: () => void;
 }) {
+  const [original, setOriginal] = useState(initialSession);
+  const formRef = useRef<HTMLFormElement>(null);
+  const latest = original && club.sessions.find((session) => session.id === original.id);
+  const conflict = !!original && !!latest && original.version !== latest.version;
+  const removed = !!original && !club.loading && !latest;
   const [localError, setLocalError] = useState('');
   const [templateId, setTemplateId] = useState('');
   const [organizerMode, setOrganizerMode] = useState<'weekly' | 'override'>(
@@ -1512,6 +1641,13 @@ function SessionForm({
   const [bookingStatus, setBookingStatus] = useState(
     original?.booking_status ?? 'pending',
   );
+  function resolveConflict(keepDraft: boolean) {
+    if (!original || !latest || !formRef.current) return;
+    const fields = mergeConflictFields(formRef.current, sessionFormValues(original), sessionFormValues(latest), keepDraft);
+    setOrganizerMode(fields.organizer_mode as 'weekly' | 'override');
+    setBookingStatus(fields.booking_status as typeof bookingStatus);
+    setOriginal(latest);
+  }
   const preset = club.templates.find((t) => t.id === templateId);
   const s =
     original ??
@@ -1530,6 +1666,7 @@ function SessionForm({
   }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (conflict || removed) return;
     setLocalError('');
     const fd = new FormData(e.currentTarget);
     const templateName = String(
@@ -1641,7 +1778,9 @@ function SessionForm({
           </select>
         </label>
       )}
-      <form key={templateId} onSubmit={(e) => void submit(e)}>
+      <form ref={formRef} key={templateId} onSubmit={(e) => void submit(e)}>
+        {conflict && <VersionConflict before={sessionFormValues(original!)} latest={sessionFormValues(latest!)} onKeepDraft={() => resolveConflict(true)} onUseLatest={() => resolveConflict(false)} />}
+        {removed && <div className="alert danger" role="alert">Buổi đánh không còn tồn tại trên thiết bị khác. Nội dung bạn nhập được giữ để sao chép; không thể lưu lên buổi đã xóa.</div>}
         <p className="form-intro">
           Mỗi ca / sân là một mục đăng ký riêng. Nếu có hai ca hoặc hai sân, hãy
           tạo hai mục cùng ngày. Tất cả giờ dưới đây là giờ Việt Nam (UTC+7).
@@ -1870,7 +2009,7 @@ function SessionForm({
             <button
               type="button"
               className="btn btn-danger"
-              disabled={club.saveState === 'saving' || !club.online}
+              disabled={club.saveState === 'saving' || !club.online || conflict || removed}
               onClick={async () => {
                 if (
                   window.confirm(
@@ -1897,7 +2036,7 @@ function SessionForm({
               className="btn btn-soft"
               type="submit"
               value="template"
-              disabled={club.saveState === 'saving' || !club.online}
+              disabled={club.saveState === 'saving' || !club.online || conflict || removed}
             >
               <Copy size={16} />
               Lưu thành mẫu
@@ -1905,7 +2044,7 @@ function SessionForm({
           )}
           <button
             className="btn btn-dark"
-            disabled={club.saveState === 'saving' || !club.online}
+            disabled={club.saveState === 'saving' || !club.online || conflict || removed}
           >
             <Check size={17} />
             {club.saveState === 'saving' ? 'Đang lưu…' : 'Lưu buổi đánh'}
@@ -1971,6 +2110,7 @@ function AttendancePanel({
           </p>
         )}
       </div>
+      <SessionShareActions session={s} club={club} />
       {locked && (
         <div className="alert danger">
           {s.booking_status === 'cancelled'

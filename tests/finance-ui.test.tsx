@@ -4,6 +4,7 @@ import React from 'react';
 import { JSDOM } from 'jsdom';
 import type { useClub } from '../src/useClub';
 import type { ClubActivity } from '../src/activityTypes';
+import { buildActivityCsv, buildActivityMessage } from '../src/financeExport';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'http://localhost/',
 });
@@ -171,6 +172,7 @@ function fixture(a = activity(), overrides: Partial<Club> = {}): Club {
 }
 beforeEach(() => {
   calls.length = 0;
+  window.history.replaceState({}, '', '/');
 });
 afterEach(() => cleanup());
 function openActivity(club: Club, kind: 'badminton' | 'trip' = 'badminton') {
@@ -350,7 +352,7 @@ test('Money form reuses operation ID on retry; receipt adjustment requires reaso
     target: { value: 'a' },
   });
   const form = within(dialog)
-    .getByRole('button', { name: 'Xác nhận đã thu / hoàn' })
+    .getByRole('button', { name: 'Xác nhận đã thu tiền' })
     .closest('form')!;
   fireEvent.submit(form);
   await waitFor(() => assert.equal(calls.length, 1));
@@ -405,4 +407,114 @@ test('Conflicting expense notes require explicit review and retain only the loca
   await waitFor(() => assert.equal(calls.length, 1));
   assert.deepEqual(calls[0].args.p_patch, { note: 'Bản đang nhập' });
   assert.equal(calls[0].args.p_expected_version, 2);
+});
+
+function cancelledTrip(): ClubActivity {
+  return activity({
+    kind: 'trip',
+    organizer_id: 'a',
+    fee_status: 'draft',
+    participants: [{
+      id: 'traveller', activity_id: 'activity', member_id: 'a', invited_by: null,
+      guest_name: '', status: 'not_going', note: 'Bận, xin hoàn tiền', billable: true,
+      share_units: 1000, share_reason: '', version: 2, updated_at: '2030-01-01T00:00:00Z',
+    }],
+    ledger: [{
+      id: 'advance', activity_id: 'activity', operation_id: 'first-payment', kind: 'collection',
+      person_id: 'traveller', payee_member_id: null, amount: 555000, note: 'Thu trước',
+      confirmed_by: 'a', created_at: '2030-01-01T00:00:00Z', voided_at: null, voided_by: null, void_reason: '',
+    }],
+    calculation: { ...activity().calculation!, people: [], total_cost: 0, total_due: 0, headcount: 0, shares: 0, breakdown: [] },
+  });
+}
+
+test('A cancelled traveller who prepaid 555000 opens an explicit 555000 refund, never a collection', async () => {
+  openActivity(fixture(cancelledTrip()), 'trip');
+  fireEvent.click(screen.getByRole('button', { name: 'Hoàn tiền' }));
+  const dialog = screen.getByRole('dialog');
+  assert.equal((within(dialog).getByLabelText('Loại ghi nhận') as HTMLSelectElement).value, 'refund');
+  assert.equal((within(dialog).getByLabelText('Số tiền thực nhận / hoàn (đ)') as HTMLInputElement).value, '555000');
+  assert.ok(within(dialog).getByText(/Bạn đang ghi nhận hoàn tiền đã đóng/));
+  fireEvent.submit(within(dialog).getByRole('button', { name: 'Xác nhận hoàn tiền đóng' }).closest('form')!);
+  await waitFor(() => assert.equal(calls.length, 1));
+  assert.equal(calls[0].args.p_kind, 'refund');
+  assert.equal(calls[0].args.p_amount, 555000);
+  assert.equal(calls[0].args.p_person, 'traveller');
+});
+
+test('Finalization retains the reviewed total and note until the new revision is explicitly acknowledged', async () => {
+  const a = activity({ fee_status: 'draft' });
+  const club = fixture(a);
+  const view = openActivity(club);
+  fireEvent.click(screen.getByRole('button', { name: 'Chốt tiền' }));
+  const dialog = screen.getByRole('dialog');
+  const note = within(dialog).getByLabelText('Ghi chú xác nhận') as HTMLTextAreaElement;
+  fireEvent.change(note, { target: { value: 'Đã kiểm đủ mọi người' } });
+  const newer = { ...a, calculation: { ...a.calculation!, total_due: 400000, total_cost: 400000 } };
+  view.rerender(<ActivitiesPage club={{ ...club, activities: { version: 1, revision: 11, activities: [newer] } }} kind="badminton" />);
+  assert.ok(within(dialog).getByText(/Dữ liệu đã thay đổi từ khi mở/));
+  assert.match(dialog.querySelector('.fee-confirm-total')!.textContent!, /395.000/);
+  assert.equal(note.value, 'Đã kiểm đủ mọi người');
+  const submit = within(dialog).getByRole('button', { name: 'Xác nhận chốt tiền' }) as HTMLButtonElement;
+  assert.equal(submit.disabled, true);
+  fireEvent.submit(submit.closest('form')!);
+  assert.equal(calls.length, 0);
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Đã đối chiếu, dùng bảng phí mới nhất' }));
+  assert.match(dialog.querySelector('.fee-confirm-total')!.textContent!, /400.000/);
+  assert.equal(note.value, 'Đã kiểm đủ mọi người');
+  assert.equal(submit.disabled, false);
+  fireEvent.submit(submit.closest('form')!);
+  await waitFor(() => assert.equal(calls.length, 1));
+  assert.equal(calls[0].args.p_expected_revision, 11);
+  assert.equal(calls[0].args.p_reason, 'Đã kiểm đủ mọi người');
+});
+
+test('Another device finalizing blocks the old form without silently changing its action to reopen', () => {
+  const a = activity({ fee_status: 'draft' });
+  const club = fixture(a);
+  const view = openActivity(club);
+  fireEvent.click(screen.getByRole('button', { name: 'Chốt tiền' }));
+  view.rerender(<ActivitiesPage club={{ ...club, activities: { version: 1, revision: 11, activities: [{ ...a, fee_status: 'finalized' }] } }} kind="badminton" />);
+  const dialog = screen.getByRole('dialog');
+  assert.ok(within(dialog).getByText(/Thiết bị khác đã chốt bảng phí/));
+  assert.equal(within(dialog).queryByRole('button', { name: 'Đã đối chiếu, dùng bảng phí mới nhất' }), null);
+  const submit = within(dialog).getByRole('button', { name: 'Xác nhận chốt tiền' }) as HTMLButtonElement;
+  assert.equal(submit.disabled, true);
+  fireEvent.submit(submit.closest('form')!);
+  assert.equal(calls.length, 0);
+});
+
+test('Checklist status can be changed inline and patches only status with the displayed version', async () => {
+  const a = activity({ kind: 'trip', checklist: [{ id: 'item', name: 'Than nướng', quantity: 2, unit: 'kg', responsible_id: 'a', status: 'todo', note: 'Giữ ghi chú', expense_id: null, version: 7, voided_at: null }] });
+  openActivity(fixture(a), 'trip');
+  fireEvent.click(screen.getByRole('tab', { name: 'Chuẩn bị' }));
+  fireEvent.change(screen.getByLabelText('Trạng thái chuẩn bị Than nướng'), { target: { value: 'done' } });
+  await waitFor(() => assert.equal(calls.length, 1));
+  assert.equal(screen.queryByRole('dialog'), null);
+  assert.equal(calls[0].name, 'save_trip_checklist');
+  assert.deepEqual(calls[0].args, { p_activity: 'activity', p_id: 'item', p_patch: { status: 'done' }, p_expected_version: 7 });
+  assert.ok(screen.getByText('Giữ ghi chú'));
+});
+
+test('An activity URL opens the exact fee sheet and back clears its activity parameter', () => {
+  window.history.replaceState({}, '', '/#finance?activity=activity');
+  render(<ActivitiesPage club={fixture()} kind="badminton" />);
+  assert.ok(screen.getByRole('heading', { name: 'Buổi kiểm thử' }));
+  fireEvent.click(screen.getByRole('button', { name: /Tất cả bảng phí/ }));
+  assert.equal(new URLSearchParams(window.location.hash.split('?')[1]).has('activity'), false);
+  assert.ok(screen.getByRole('button', { name: /Buổi kiểm thử/ }));
+});
+
+test('Financial message and CSV retain the cancelled-traveller refund and escape names, quotes and newlines', () => {
+  const a = cancelledTrip();
+  const message = buildActivityMessage(a, members, 'https://club.example/#travel?activity=activity');
+  assert.match(message, /TẠM TÍNH/);
+  assert.match(message, /Yến: phải đóng 0/);
+  assert.match(message, /cần hoàn 555.000/);
+  assert.match(message, /#travel\?activity=activity/);
+  const csv = buildActivityCsv({ ...a, title: '=SUM(A1:A2)', participants: [{ ...a.participants![0], note: 'Ghi chú "mới"\nDòng 2' }] }, members);
+  assert.ok(csv.includes('"\'=SUM(A1:A2)"'));
+  assert.ok(csv.includes('0,555000,0,555000'));
+  assert.ok(csv.includes('"Ghi chú ""mới""\nDòng 2"'));
+  assert.equal(csv.startsWith('\ufeff'), false);
 });

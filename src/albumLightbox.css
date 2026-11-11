@@ -1,0 +1,424 @@
+.album-lightbox {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #f5f8ef;
+  background: #092720;
+  overflow: hidden;
+  overscroll-behavior: none;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.album-lightbox[open] {
+  display: grid;
+}
+.album-lightbox::backdrop {
+  background: #092720;
+}
+.album-lightbox-top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: max(17px, env(safe-area-inset-top))
+    max(25px, env(safe-area-inset-right)) 14px
+    max(25px, env(safe-area-inset-left));
+  min-width: 0;
+  border-bottom: 1px solid #ffffff12;
+}
+.album-lightbox-heading {
+  flex: 1;
+  min-width: 0;
+}
+.album-lightbox-heading > span {
+  color: #c7e995;
+  letter-spacing: 2px;
+  font-size: 9px;
+  font-weight: 800;
+}
+.album-lightbox-heading h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.album-lightbox-count {
+  color: #b0c6b9;
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.album-lightbox button {
+  font-family: inherit;
+}
+.album-lightbox :focus-visible {
+  outline: 3px solid #d3f66b;
+  outline-offset: 3px;
+}
+.album-lightbox-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f7f9f4;
+  background: #ffffff0c;
+  border: 1px solid #ffffff13;
+  border-radius: 50%;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+.album-lightbox-icon:hover:not(:disabled) {
+  background: #ffffff1d;
+  border-color: #d3f66b77;
+}
+.album-lightbox-icon:disabled {
+  opacity: 0.3;
+}
+.album-lightbox-close {
+  background: #ffffff12;
+}
+.album-lightbox-viewport {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.album-lightbox-stage {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+  cursor: zoom-in;
+}
+.album-lightbox-stage.is-zoomed {
+  cursor: grab;
+}
+.album-lightbox-stage.is-zoomed:active {
+  cursor: grabbing;
+}
+.album-lightbox-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transform-origin: center;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.album-lightbox-image.is-loaded {
+  opacity: 1;
+}
+.album-lightbox-prev,
+.album-lightbox-next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  background: #092720a6;
+  backdrop-filter: blur(9px);
+}
+.album-lightbox-prev {
+  left: 18px;
+}
+.album-lightbox-next {
+  right: 18px;
+}
+.album-lightbox-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #c1d2c6;
+  font-size: 12px;
+  pointer-events: none;
+}
+.album-lightbox-loading > svg,
+.album-lightbox-spin {
+  animation: album-lightbox-spin 1s linear infinite;
+}
+.album-lightbox-image-error {
+  padding: 25px;
+  max-width: 340px;
+  text-align: center;
+  color: #e4e8d9;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.album-lightbox-image-error > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  border: 1px solid #d3f66b55;
+  border-radius: 9px;
+  padding: 10px 14px;
+  background: #d3f66b;
+  color: #173c2b;
+  font-size: 12px;
+  font-weight: 700;
+}
+.album-lightbox-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 25px;
+  border-top: 1px solid #ffffff12;
+}
+.album-lightbox-zoom,
+.album-lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.album-lightbox-zoom > output {
+  min-width: 42px;
+  color: #c5d5ca;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.album-lightbox-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 15px;
+  border-radius: 12px;
+  background: #d3f66b;
+  color: #13362b;
+  font-size: 11px;
+  font-weight: 800;
+}
+.album-lightbox-footer {
+  padding: 0 25px max(16px, env(safe-area-inset-bottom));
+  text-align: center;
+  min-width: 0;
+  max-height: 35dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.album-lightbox-caption {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  padding-bottom: 11px;
+}
+.album-lightbox-caption p {
+  max-width: 800px;
+  line-height: 1.7;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.album-lightbox-caption > span {
+  color: #96b2a0;
+  font-size: 9px;
+}
+.album-lightbox-thumbnails {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto;
+}
+.album-lightbox-thumbnails button {
+  width: 50px;
+  height: 42px;
+  padding: 2px;
+  flex-shrink: 0;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #ffffff12;
+  opacity: 0.6;
+}
+.album-lightbox-thumbnails button[aria-current='true'] {
+  border-color: #d3f66b;
+  opacity: 1;
+}
+.album-lightbox-thumbnails button:hover {
+  opacity: 1;
+}
+.album-lightbox-thumbnails img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+.album-lightbox-hint {
+  font-size: 9px;
+  color: #87a993;
+  line-height: 1.7;
+  padding-top: 10px;
+}
+.album-lightbox-download-error,
+.album-lightbox-share-notice {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid #e9c58655;
+  border-radius: 9px;
+  background: #e9c58612;
+  font-size: 11px;
+  line-height: 1.8;
+  color: #f0d9b5;
+}
+.album-lightbox-share-notice {
+  border-color: #d3f66b55;
+  background: #d3f66b12;
+  color: #e2f1bd;
+}
+.album-lightbox-download-error a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: underline;
+  font-weight: 700;
+}
+@keyframes album-lightbox-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (min-width: 900px) {
+  .album-lightbox-stage {
+    padding: 15px 78px;
+  }
+  .album-lightbox-thumbnails button {
+    width: 58px;
+    height: 46px;
+  }
+}
+@media (max-width: 600px) {
+  .album-lightbox-top {
+    gap: 12px;
+    padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  }
+  .album-lightbox-heading h2 {
+    font-size: 11px;
+  }
+  .album-lightbox-heading > span {
+    font-size: 8px;
+  }
+  .album-lightbox-count {
+    font-size: 10px;
+  }
+  .album-lightbox-controls {
+    padding: 10px;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .album-lightbox-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .album-lightbox-close {
+    width: 44px;
+    height: 44px;
+  }
+  .album-lightbox-zoom,
+  .album-lightbox-actions {
+    gap: 3px;
+  }
+  .album-lightbox-zoom > output {
+    min-width: 35px;
+    font-size: 10px;
+  }
+  .album-lightbox-download {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 9px 10px;
+    border-radius: 10px;
+  }
+  .album-lightbox-download > span {
+    display: none;
+  }
+  .album-lightbox-prev,
+  .album-lightbox-next {
+    width: 36px;
+    height: 42px;
+    background: #09272080;
+    border-radius: 10px;
+  }
+  .album-lightbox-prev {
+    left: 7px;
+  }
+  .album-lightbox-next {
+    right: 7px;
+  }
+  .album-lightbox-footer {
+    padding-right: 12px;
+    padding-left: 12px;
+    max-height: 32dvh;
+  }
+  .album-lightbox-thumbnails {
+    gap: 5px;
+  }
+  .album-lightbox-thumbnails button {
+    width: min(11.7vw, 43px);
+    height: 35px;
+  }
+  .album-lightbox-caption p {
+    font-size: 11px;
+  }
+  .album-lightbox-hint {
+    font-size: 8px;
+    padding-top: 8px;
+  }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .album-lightbox-top {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .album-lightbox-heading > span,
+  .album-lightbox-thumbnails,
+  .album-lightbox-hint {
+    display: none;
+  }
+  .album-lightbox-controls {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .album-lightbox-footer {
+    max-height: 23dvh;
+    padding-bottom: 7px;
+  }
+  .album-lightbox-caption {
+    padding-bottom: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .album-lightbox *,
+  .album-lightbox *::before,
+  .album-lightbox *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

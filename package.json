@@ -10,7 +10,8 @@
     "test": "tsx --test tests/*.test.ts tests/*.test.tsx",
     "check:connection": "node scripts/check-connection.mjs",
     "check:booking-access": "node scripts/check-booking-access.mjs",
-    "check:finance-access": "node scripts/check-finance-access.mjs"
+    "check:finance-access": "node scripts/check-finance-access.mjs",
+    "check:album-access": "node scripts/check-album-access.mjs"
   },
   "dependencies": {
     "@supabase/server": "^1.9.2",
