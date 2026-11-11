@@ -6,7 +6,7 @@ React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: 
 
 Album chung có chế độ ảnh bay chậm/dừng chuyển động và lưới, xem ảnh lớn/vuốt/phóng to/tải ảnh, chọn nhiều file/kéo thả, chú thích và Thùng rác. Mọi khách đều quản lý được album; quyền lịch đánh và tài chính giữ nguyên. Ảnh gốc và thumbnail lưu trong Supabase Storage, metadata lưu PostgreSQL và đồng bộ qua Realtime riêng.
 
-Chạy [migration Album đội](./supabase/migrations/202611110001_team_album.sql) trong Supabase SQL Editor rồi triển khai lại frontend. Dùng URL/key đang có, không thêm khóa bí mật. Mở trực tiếp `/#album` để vào album mà không cần chọn tên. Xem [cấu hình và nghiệm thu Album đội](./docs/team-album.md), kiểm tra backend chỉ đọc bằng `npm run check:album-access`. Không có ảnh mẫu hoặc dữ liệu đồng bộ giả.
+Chạy [migration Album đội](./supabase/migrations/202611110001_team_album.sql) trong Supabase SQL Editor, sau đó chạy [migration tương thích thumbnail Safari](./supabase/migrations/202611110004_team_album_thumbnail_compat.sql) rồi triển khai lại frontend. Thumbnail ưu tiên WebP và tự chuyển sang JPEG nếu Safari không hỗ trợ mã hóa WebP. Dùng URL/key đang có, không thêm khóa bí mật. Mở trực tiếp `/#album` để vào album mà không cần chọn tên. Xem [cấu hình và nghiệm thu Album đội](./docs/team-album.md), kiểm tra backend chỉ đọc bằng `npm run check:album-access`. Không có ảnh mẫu hoặc dữ liệu đồng bộ giả.
 
 Nếu đã cài album trước bản sửa xung đột, chạy tiếp [bản sửa HTTP 409](./supabase/migrations/202611110002_album_conflict_http.sql) để yêu cầu sửa từ phiên bản cũ trả thông báo ngay, tránh vòng lặp thử lại của PostgREST. Bản sửa giữ nguyên ảnh và dữ liệu.
 

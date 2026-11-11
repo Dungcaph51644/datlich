@@ -7,7 +7,9 @@ Album dùng lại màu xanh đậm, lime và font của website. Có hai chế �
 1. Giữ nguyên dự án Supabase và biến kết nối hiện có. Không cần thêm khóa bí mật hoặc bật đăng nhập cho album.
 2. Sau các migration hiện có đến bản `202611100004`, mở [migration Album đội](../supabase/migrations/202611110001_team_album.sql).
 3. Trong Supabase → **SQL Editor → New query**, dán **toàn bộ** file và bấm **Run**. Cần chạy cả đoạn publication Realtime ở cuối. Không chỉ chạy phần tạo bảng.
-4. Tải lại website hoặc bấm thử kết nối lại tại **Album đội**. Khi triển khai Netlify, build lại source để có mục điều hướng mới; deploy frontend không tự chạy SQL.
+4. Chạy tiếp [migration tương thích thumbnail Safari](../supabase/migrations/202611110004_team_album_thumbnail_compat.sql). Migration giữ nguyên các lượt upload WebP đã bắt đầu và cho phép lượt mới dùng JPEG khi trình duyệt không tạo được WebP.
+5. Nếu đã cài album trước bản sửa xung đột, chạy tiếp [migration HTTP 409](../supabase/migrations/202611110002_album_conflict_http.sql).
+6. Tải lại website hoặc bấm thử kết nối lại tại **Album đội**. Khi triển khai Netlify, build lại source để có mục điều hướng mới; deploy frontend không tự chạy SQL.
 
 Migration không nhập lịch sử, không tạo album/ảnh mẫu và không thay đổi dữ liệu cầu lông, phân công, tài chính hoặc du lịch. Chạy lại chính migration album không tạo trùng nội dung. Không chạy lại các migration cũ sau bản mới vì có thể thay định nghĩa API của tính năng trước.
 
@@ -45,9 +47,9 @@ order by query_start;
 | `public.team_album_sync`     | Bộ đếm thay đổi công khai được phát qua Supabase Realtime                                       |
 | `private.team_album_uploads` | Quyền tải tạm cho đúng hai đường dẫn ngẫu nhiên, trạng thái hoàn tất và mã thao tác chống trùng |
 | `private.team_album_history` | Dấu vết trước/sau của thao tác album và ảnh; không gán tên thành viên cho khách chưa xác minh   |
-| Bucket `team-album`          | Tệp ảnh gốc và ảnh WebP thu nhỏ, lưu trực tuyến                                                 |
+| Bucket `team-album`          | Tệp ảnh gốc và thumbnail WebP/JPEG, lưu trực tuyến                                               |
 
-Storage bucket được tạo tự động trong migration. Ảnh gốc nhận JPG/PNG/WebP tối đa **15 MiB**, thumbnail WebP tối đa **1 MiB**. Ảnh HEIC/HEIF cần xuất sang định dạng hỗ trợ trước khi tải. Giới hạn tài khoản Supabase về dung lượng và lưu lượng vẫn áp dụng.
+Storage bucket được tạo tự động trong migration. Ảnh gốc nhận JPG/PNG/WebP tối đa **15 MiB**, thumbnail WebP hoặc JPEG tối đa **1 MiB**. Trình duyệt ưu tiên WebP; Safari tự dùng JPEG nếu bộ mã hóa WebP của canvas không khả dụng. Ảnh HEIC/HEIF cần xuất sang định dạng hỗ trợ trước khi tải. Giới hạn tài khoản Supabase về dung lượng và lưu lượng vẫn áp dụng.
 
 ## Quản lý mở, chỉ trong album
 

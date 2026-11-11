@@ -51,6 +51,7 @@ export interface AlbumUploadDependencies<T> {
     p_width: number;
     p_height: number;
     p_filename: string;
+    p_thumbnail_mime: string;
   }) => Promise<unknown>;
   upload: (
     bucket: string,
@@ -67,6 +68,51 @@ export interface AlbumUploadDependencies<T> {
 
 function abortIfNeeded(signal?: AbortSignal) {
   if (signal?.aborted) throw new DOMException('Đã dừng tải ảnh.', 'AbortError');
+}
+
+function canvasBlob(
+  canvas: HTMLCanvasElement,
+  mime: string,
+  quality: number,
+): Promise<Blob | null> {
+  return new Promise((resolve, reject) => {
+    try {
+      canvas.toBlob(resolve, mime, quality);
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+export async function encodeAlbumThumbnail(
+  canvas: HTMLCanvasElement,
+  drawJpegFallback: () => void,
+): Promise<Blob> {
+  try {
+    const webp = await canvasBlob(canvas, 'image/webp', 0.8);
+    if (
+      webp?.type === 'image/webp' &&
+      webp.size > 0 &&
+      webp.size <= ALBUM_THUMBNAIL_MAX_BYTES
+    )
+      return webp;
+  } catch {
+    // Continue with the broadly supported JPEG encoder.
+  }
+
+  drawJpegFallback();
+  for (const quality of [0.82, 0.68, 0.54]) {
+    const jpeg = await canvasBlob(canvas, 'image/jpeg', quality);
+    if (
+      jpeg?.type === 'image/jpeg' &&
+      jpeg.size > 0 &&
+      jpeg.size <= ALBUM_THUMBNAIL_MAX_BYTES
+    )
+      return jpeg;
+  }
+  throw new Error(
+    'Không tạo được ảnh thu nhỏ tương thích trên thiết bị này. Hãy thử ảnh khác.',
+  );
 }
 
 export function validateAlbumImageFile(file: File) {
@@ -91,6 +137,7 @@ export async function createAlbumThumbnail(
   abortIfNeeded(signal);
   const url = URL.createObjectURL(file);
   const image = new Image();
+  let canvas: HTMLCanvasElement | null = null;
   try {
     await new Promise<void>((resolve, reject) => {
       const abort = () => {
@@ -127,38 +174,33 @@ export async function createAlbumThumbnail(
         'Kích thước ảnh không hợp lệ hoặc quá lớn để xử lý trên thiết bị.',
       );
     const scale = Math.min(1, 720 / Math.max(width, height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.round(width * scale));
-    canvas.height = Math.max(1, Math.round(height * scale));
-    const context = canvas.getContext('2d');
+    const thumbnailCanvas = document.createElement('canvas');
+    canvas = thumbnailCanvas;
+    thumbnailCanvas.width = Math.max(1, Math.round(width * scale));
+    thumbnailCanvas.height = Math.max(1, Math.round(height * scale));
+    const context = thumbnailCanvas.getContext('2d');
     if (!context)
       throw new Error(
         'Trình duyệt chưa hỗ trợ tạo ảnh thu nhỏ. Hãy cập nhật trình duyệt.',
       );
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (result) =>
-          result
-            ? resolve(result)
-            : reject(new Error('Không tạo được ảnh thu nhỏ. Hãy thử lại.')),
-        'image/webp',
-        0.8,
+    context.drawImage(image, 0, 0, thumbnailCanvas.width, thumbnailCanvas.height);
+    const blob = await encodeAlbumThumbnail(thumbnailCanvas, () => {
+      context.fillStyle = '#fff';
+      context.fillRect(0, 0, thumbnailCanvas.width, thumbnailCanvas.height);
+      context.drawImage(
+        image,
+        0,
+        0,
+        thumbnailCanvas.width,
+        thumbnailCanvas.height,
       );
     });
     abortIfNeeded(signal);
-    if (
-      blob.type !== 'image/webp' ||
-      blob.size > ALBUM_THUMBNAIL_MAX_BYTES ||
-      blob.size <= 0
-    )
-      throw new Error(
-        'Trình duyệt chưa tạo được ảnh WebP thu nhỏ phù hợp. Hãy cập nhật trình duyệt hoặc chọn ảnh khác.',
-      );
-    canvas.width = canvas.height = 0;
+    thumbnailCanvas.width = thumbnailCanvas.height = 0;
     return { blob, width, height };
   } finally {
     image.onload = image.onerror = null;
+    if (canvas) canvas.width = canvas.height = 0;
     URL.revokeObjectURL(url);
   }
 }
@@ -187,7 +229,7 @@ function readPermit(
     p.bucket !== 'team-album' ||
     !validPath(p.original_path) ||
     !validPath(p.thumbnail_path) ||
-    !p.thumbnail_path.endsWith('.webp') ||
+    !/\.(?:jpg|webp)$/.test(p.thumbnail_path) ||
     p.original_path === p.thumbnail_path ||
     typeof p.original_exists !== 'boolean' ||
     typeof p.thumbnail_exists !== 'boolean' ||
@@ -209,7 +251,7 @@ export async function uploadAlbumPhoto<T>(
   if (!uuidPattern.test(input.operationId) || !uuidPattern.test(input.albumId))
     throw new Error('Mã album hoặc lượt tải ảnh không hợp lệ.');
   if (
-    thumbnail.blob.type !== 'image/webp' ||
+    !['image/webp', 'image/jpeg'].includes(thumbnail.blob.type) ||
     thumbnail.blob.size <= 0 ||
     thumbnail.blob.size > ALBUM_THUMBNAIL_MAX_BYTES ||
     !Number.isSafeInteger(thumbnail.width) ||
@@ -231,6 +273,7 @@ export async function uploadAlbumPhoto<T>(
     p_width: thumbnail.width,
     p_height: thumbnail.height,
     p_filename: input.file.name,
+    p_thumbnail_mime: thumbnail.blob.type,
   });
   abortIfNeeded(dependencies.signal);
   const permit = readPermit(

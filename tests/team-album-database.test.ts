@@ -24,6 +24,7 @@ test('Team album: two anonymous clients, real PostgreSQL validation, Storage cap
     '202611100003_finance_travel.sql',
     '202611100004_auto_fees_and_covers.sql',
     '202611110001_team_album.sql',
+    '202611110004_team_album_thumbnail_compat.sql',
   ]) {
     const sql = await readFile(
       new URL(`../supabase/migrations/${name}`, import.meta.url),
@@ -81,6 +82,7 @@ test('Team album: two anonymous clients, real PostgreSQL validation, Storage cap
       mime: 'image/jpeg',
       size: 123,
       thumbSize: 45,
+      thumbMime: 'image/webp',
       width: 1000,
       height: 750,
       filename: 'trận cầu.jpg',
@@ -95,6 +97,7 @@ test('Team album: two anonymous clients, real PostgreSQL validation, Storage cap
       p.width,
       p.height,
       p.filename,
+      p.thumbMime,
     ];
   }
   async function uploadObject(
@@ -294,6 +297,42 @@ test('Team album: two anonymous clients, real PostgreSQL validation, Storage cap
       await assert.rejects(
         () => db.query('select * from private.team_album_history'),
         /permission denied/,
+      );
+    },
+  );
+
+  await t.test(
+    'JPEG thumbnail fallback is accepted and verified; old WebP clients remain compatible',
+    async () => {
+      const jpeg = await call(
+        'prepare_team_album_upload',
+        uploadArgs(album.id, randomUUID(), { thumbMime: 'image/jpeg' }),
+      );
+      assert.match(jpeg.thumbnail_path, /^thumbnails\/[a-f0-9-]+\.jpg$/);
+      await uploadObject(jpeg.original_path);
+      await uploadObject(jpeg.thumbnail_path, 'image/jpeg', 45);
+      const saved = await call('finish_team_album_upload', [
+        jpeg.operation_id,
+        'Safari JPEG thumbnail',
+      ]);
+      assert.equal(saved.thumbnail_path, jpeg.thumbnail_path);
+
+      const legacyArgs = uploadArgs(album.id).slice(0, 8);
+      const legacy = await call('prepare_team_album_upload', legacyArgs);
+      assert.match(legacy.thumbnail_path, /^thumbnails\/[a-f0-9-]+\.webp$/);
+      await uploadObject(legacy.original_path);
+      await uploadObject(legacy.thumbnail_path, 'image/webp', 45);
+      const legacySaved = await call('finish_team_album_upload', [
+        legacy.operation_id,
+        'Old client WebP',
+      ]);
+      assert.equal(legacySaved.thumbnail_path, legacy.thumbnail_path);
+
+      await assert.rejects(() =>
+        call(
+          'prepare_team_album_upload',
+          uploadArgs(album.id, randomUUID(), { thumbMime: 'image/png' }),
+        ),
       );
     },
   );

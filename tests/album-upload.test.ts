@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ALBUM_IMAGE_MAX_BYTES,
+  ALBUM_THUMBNAIL_MAX_BYTES,
+  encodeAlbumThumbnail,
   reconcileAlbumUploadCaption,
   validateAlbumImageFile,
   uploadAlbumPhoto,
@@ -123,6 +125,56 @@ test('Album accepts supported image files through 15 MiB, with explicit empty/HE
   );
 });
 
+test('Thumbnail generation falls back from unsupported WebP encoding to bounded JPEG', async () => {
+  const requested: string[] = [];
+  let drawnJpegFallback = false;
+  const canvas = {
+    toBlob(
+      callback: BlobCallback,
+      type = 'image/png',
+    ) {
+      requested.push(type);
+      callback(
+        type === 'image/webp'
+          ? new Blob(['Safari PNG fallback'], { type: 'image/png' })
+          : new Blob(['JPEG thumbnail'], { type: 'image/jpeg' }),
+      );
+    },
+  } as unknown as HTMLCanvasElement;
+  const thumbnail = await encodeAlbumThumbnail(canvas, () => {
+    drawnJpegFallback = true;
+  });
+  assert.equal(thumbnail.type, 'image/jpeg');
+  assert.deepEqual(requested, ['image/webp', 'image/jpeg']);
+  assert.equal(drawnJpegFallback, true);
+
+  const webpCanvas = {
+    toBlob(callback: BlobCallback, type = 'image/png') {
+      callback(new Blob(['WebP thumbnail'], { type }));
+    },
+  } as unknown as HTMLCanvasElement;
+  const webp = await encodeAlbumThumbnail(webpCanvas, () => {
+    assert.fail('JPEG drawing is unnecessary when WebP is supported');
+  });
+  assert.equal(webp.type, 'image/webp');
+
+  const oversizedCanvas = {
+    toBlob(callback: BlobCallback, type = 'image/png') {
+      callback(
+        new Blob([
+          new Uint8Array(
+            type === 'image/webp' ? 1 : ALBUM_THUMBNAIL_MAX_BYTES + 1,
+          ),
+        ], { type: type === 'image/webp' ? 'image/png' : type }),
+      );
+    },
+  } as unknown as HTMLCanvasElement;
+  await assert.rejects(
+    encodeAlbumThumbnail(oversizedCanvas, () => {}),
+    /Không tạo được ảnh thu nhỏ tương thích/,
+  );
+});
+
 test('Album prepares original metadata, uploads original plus thumbnail, and finishes only after both Storage acknowledgements', async () => {
   const f = fixture();
   assert.deepEqual(await uploadAlbumPhoto(f.input, f.dependencies), photo);
@@ -136,6 +188,7 @@ test('Album prepares original metadata, uploads original plus thumbnail, and fin
       p_width: 1920,
       p_height: 1080,
       p_filename: 'ky-niem.jpg',
+      p_thumbnail_mime: 'image/webp',
     },
   ]);
   assert.deepEqual(
@@ -153,6 +206,30 @@ test('Album prepares original metadata, uploads original plus thumbnail, and fin
   assert.deepEqual(f.phases, ['preparing', 'uploading', 'saving']);
   assert.equal(f.progress.at(-1), 110);
   assert.ok(f.progress.includes(50));
+});
+
+test('Album upload sends Safari JPEG thumbnails with matching MIME and extension', async () => {
+  const f = fixture();
+  const jpegPath = `photos/${photoId}/thumbnail.jpg`;
+  f.input.thumbnail.blob = new Blob([new Uint8Array(10)], {
+    type: 'image/jpeg',
+  });
+  f.dependencies.prepare = async (args) => {
+    f.prepared.push(args);
+    return issued({ thumbnail_path: jpegPath });
+  };
+  await uploadAlbumPhoto(f.input, f.dependencies);
+  assert.equal(
+    (f.prepared[0] as { p_thumbnail_mime: string }).p_thumbnail_mime,
+    'image/jpeg',
+  );
+  assert.deepEqual(
+    f.uploaded.map((item) => [item.path, item.blob.type]),
+    [
+      [originalPath, 'image/jpeg'],
+      [jpegPath, 'image/jpeg'],
+    ],
+  );
 });
 
 test('Uploading all bytes does not report saved before metadata acknowledgement', async () => {
