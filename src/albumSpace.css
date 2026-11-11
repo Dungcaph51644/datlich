@@ -268,6 +268,12 @@
     opacity 0.65s ease,
     border-color 0.2s ease;
 }
+.album-space-stage.album-float-light .album-space-nebula {
+  animation: none;
+}
+.album-space-stage.album-float-light .album-flight-face {
+  box-shadow: 0 8px 18px #0006;
+}
 .album-flight-front {
   flex-direction: column;
   padding: 5px 5px 0;

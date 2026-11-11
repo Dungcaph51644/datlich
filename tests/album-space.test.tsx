@@ -433,7 +433,7 @@ test('Opening a photo freezes frames before onOpen; only closing the external vi
   assert.equal(frames.size, 1);
 });
 
-test('Desktop renders at most eight double-sided thumbnail cards; mobile limits the same scene to four', async () => {
+test('Desktop renders eight double-sided cards; mobile renders nine before rotating larger albums', async () => {
   const requestedPaths: string[] = [];
   const photoUrl = (path: string) => {
     requestedPaths.push(path);
@@ -453,11 +453,19 @@ test('Desktop renders at most eight double-sided thumbnail cards; mobile limits 
   await setMedia('(max-width: 700px)', true);
   assert.equal(
     view.container.querySelectorAll('.album-flight-photo').length,
-    4,
+    9,
   );
-  assert.equal(view.container.querySelectorAll('.album-flight-face').length, 8);
+  assert.equal(view.container.querySelectorAll('.album-flight-face').length, 18);
   assert.ok(requestedPaths.every((path) => path.endsWith('/thumbnail.webp')));
   assert.equal(frames.size, 1);
+  view.rerender(<AlbumSpace {...props({ photos: photos.slice(0, 9), photoUrl })} />);
+  assert.deepEqual(
+    Array.from(
+      view.container.querySelectorAll<HTMLButtonElement>('.album-flight-photo'),
+      (photo) => photo.dataset.albumPhoto,
+    ),
+    photos.slice(0, 9).map((photo) => photo.id),
+  );
 });
 
 test('Keyboard focus freezes moving photo targets until focus leaves the scene', async () => {

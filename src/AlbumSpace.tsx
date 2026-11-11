@@ -119,7 +119,7 @@ export function AlbumSpace({
   const pinch = useRef<Pinch | null>(null);
   const suppressClick = useRef(false);
   const suppressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const count = light ? 4 : 8;
+  const count = light ? 9 : 8;
   const visible = useMemo(
     () =>
       Array.from(
@@ -156,7 +156,7 @@ export function AlbumSpace({
     previousFrame.current = null;
   }, []);
 
-  const paint = useCallback(() => {
+  const paintCamera = useCallback(() => {
     const world = sampleAlbumWorld(elapsed.current);
     const camera = angles.current;
     if (worldNode.current)
@@ -169,6 +169,10 @@ export function AlbumSpace({
     if (cameraNode.current)
       cameraNode.current.style.transform =
         'scale(' + camera.zoom.toFixed(3) + ')';
+  }, []);
+
+  const paint = useCallback(() => {
+    paintCamera();
     const entrance =
       skipEntrance.current || live.current.reduced
         ? 1
@@ -187,7 +191,7 @@ export function AlbumSpace({
       if (elements.slot) elements.slot.style.transform = flightTransform(pose);
       if (elements.photo) elements.photo.style.transform = photoTransform(pose);
     }
-  }, []);
+  }, [paintCamera]);
 
   const updateZoom = useCallback(
     (value: number) => {
@@ -195,9 +199,9 @@ export function AlbumSpace({
       const zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
       angles.current.zoom = zoom;
       setZoomPercent(Math.round(zoom * 100));
-      paint();
+      paintCamera();
     },
-    [paint],
+    [paintCamera],
   );
 
   useLayoutEffect(() => {
@@ -308,7 +312,7 @@ export function AlbumSpace({
 
   useLayoutEffect(() => {
     stop();
-    paint();
+    paintCamera();
     if (!moving || !live.current.visible.length) return;
     running.current = true;
     lastPaint.current = null;
@@ -572,7 +576,7 @@ export function AlbumSpace({
     current.lastX = event.clientX;
     current.lastY = event.clientY;
     current.lastTime = now;
-    paint();
+    paintCamera();
   }
   function endDrag(event: ReactPointerEvent<HTMLDivElement>, canceled = false) {
     pointers.current.delete(event.pointerId);
@@ -634,7 +638,7 @@ export function AlbumSpace({
     >
       <div className="album-space-nebula" aria-hidden="true" />
       <div className="album-space-stars" aria-hidden="true">
-        {Array.from({ length: light ? 32 : 58 }, (_, index) => (
+        {Array.from({ length: light ? 16 : 58 }, (_, index) => (
           <span
             key={index}
             className="album-space-star"
