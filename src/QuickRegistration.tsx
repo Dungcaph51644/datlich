@@ -93,7 +93,7 @@ export function MemberPicker({
             matchesSearch(`${m.display_name} ${m.code}`, query),
         ) && (
           <p className="form-help">
-            Không thấy tên phù hợp. Nhờ quản trị viên thêm bạn vào nhóm.
+            Không thấy tên phù hợp. Nhờ một thành viên trong nhóm chọn tên của họ rồi thêm bạn.
           </p>
         )}
     </div>

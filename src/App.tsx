@@ -44,6 +44,7 @@ import {
   configured,
   dateKey,
   formatDate,
+  loginRedirectUrl,
   message,
   monday,
   registrationArgs,
@@ -123,6 +124,7 @@ export default function App() {
     : 0;
   const setWeek = (value: number) => navigateRoute({ page: 'schedule', week: dateKey(monday(value)), day: undefined, session: undefined });
   const [modal, setModal] = useState<ModalState>(null);
+  const [creationIntent, setCreationIntent] = useState<'session' | 'member' | null>(null);
   const [search, setSearch] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -179,8 +181,16 @@ export default function App() {
   const openAttendance = (session: CourtSession) => navigateRoute({ page: 'schedule', week: routeMonday(session.session_date), day: undefined, session: session.id });
   const closeModal = () => {
     setModal(null);
+    setCreationIntent(null);
     if (route.session) navigateRoute({ session: undefined });
   };
+  function startCreation(type: 'session' | 'member') {
+    if (club.me) setModal({ type });
+    else {
+      setCreationIntent(type);
+      setModal({ type: 'choose' });
+    }
+  }
   function register(session?: CourtSession) {
     if (!club.memberId && club.quickReady) setModal({ type: 'choose' });
     else if (!club.quickReady && !club.account) setModal({ type: 'login' });
@@ -571,13 +581,14 @@ export default function App() {
                     <h2>Chờ một chiếc hẹn mới</h2>
                     <p>
                       {configured
-                        ? 'Lịch sắp tới sẽ xuất hiện ở đây ngay khi quản trị viên tạo buổi đánh.'
+                        ? 'Chọn tên của bạn để tạo buổi đánh và hẹn cả nhóm lên sân.'
                         : 'Kết nối Supabase để bắt đầu lên lịch và rủ cả nhóm ra sân.'}
                     </p>
-                    {isAdmin && (
+                    {club.quickReady && (
                       <button
                         className="btn btn-dark"
-                        onClick={() => setModal({ type: 'session' })}
+                        disabled={busy}
+                        onClick={() => startCreation('session')}
                       >
                         <Plus size={17} />
                         Tạo buổi đầu tiên
@@ -608,24 +619,24 @@ export default function App() {
                 </div>
                 <div className="heading-actions">
                   {isAdmin && (
-                    <>
-                      <button
-                        className="btn btn-soft"
-                        disabled={busy}
-                        onClick={() => void copyWeek()}
-                      >
-                        <Copy size={16} />
-                        <span>Sao chép tuần</span>
-                      </button>
-                      <button
-                        className="btn btn-dark"
-                        disabled={busy}
-                        onClick={() => setModal({ type: 'session' })}
-                      >
-                        <Plus size={17} />
-                        Tạo buổi đánh
-                      </button>
-                    </>
+                    <button
+                      className="btn btn-soft"
+                      disabled={busy}
+                      onClick={() => void copyWeek()}
+                    >
+                      <Copy size={16} />
+                      <span>Sao chép tuần</span>
+                    </button>
+                  )}
+                  {club.quickReady && (
+                    <button
+                      className="btn btn-dark"
+                      disabled={busy}
+                      onClick={() => startCreation('session')}
+                    >
+                      <Plus size={17} />
+                      Tạo buổi đánh
+                    </button>
                   )}
                 </div>
               </div>
@@ -746,15 +757,14 @@ export default function App() {
                   <p>
                     {sessionFilter !== 'all'
                       ? 'Chọn Tất cả để xem đầy đủ lịch của tuần, hoặc đổi ngày đang lọc.'
-                      : isAdmin
-                      ? 'Tạo buổi mới hoặc sao chép lịch từ tuần trước. Mỗi ca / sân có danh sách đăng ký riêng.'
-                      : 'Một buổi cầu vui đang chờ phía trước. Lịch sẽ được cập nhật tại đây.'}
+                      : 'Chọn tên rồi tạo buổi mới. Mỗi ca / sân có danh sách đăng ký riêng.'}
                   </p>
                   {sessionFilter !== 'all' && <button className="btn btn-soft" onClick={() => { setSessionFilter('all'); setDay(null); }}>Xem tất cả lịch tuần</button>}
-                  {isAdmin && sessionFilter === 'all' && (
+                  {club.quickReady && sessionFilter === 'all' && (
                     <button
                       className="text-btn"
-                      onClick={() => setModal({ type: 'session' })}
+                      disabled={busy}
+                      onClick={() => startCreation('session')}
                     >
                       Tạo buổi đánh <Plus size={16} />
                     </button>
@@ -818,11 +828,11 @@ export default function App() {
                   </span>
                 </h1>
               </div>
-              {isAdmin && (
+              {club.quickReady && (
                 <button
                   className="btn btn-dark"
                   disabled={busy}
-                  onClick={() => setModal({ type: 'member' })}
+                  onClick={() => startCreation('member')}
                 >
                   <Plus size={17} />
                   Thêm thành viên
@@ -1078,6 +1088,11 @@ export default function App() {
               <MemberPicker
                 club={club}
                 onDone={() => {
+                  if (creationIntent) {
+                    setModal({ type: creationIntent });
+                    setCreationIntent(null);
+                    return;
+                  }
                   const session = club.sessions.find((s) => s.id === route.session);
                   setModal(session ? { type: 'attendance', session } : null);
                   requestAnimationFrame(() =>
@@ -1115,14 +1130,14 @@ export default function App() {
           {(modal.type === 'booking-session' ||
             modal.type === 'verify-booking' ||
             modal.type === 'session') && <BookingWriteState club={club} />}
-          {modal.type === 'member' && isAdmin && (
+          {modal.type === 'member' && (modal.member ? isAdmin : !!club.me) && (
             <MemberForm
               member={modal.member}
               club={club}
               close={closeModal}
             />
           )}
-          {modal.type === 'session' && isAdmin && (
+          {modal.type === 'session' && (modal.session ? isAdmin : !!club.me) && (
             <SessionForm
               session={modal.session}
               club={club}
@@ -1372,6 +1387,7 @@ function SessionShareActions({ session, club }: { session: CourtSession; club: C
 }
 
 function LoginForm() {
+  const onLoginSite = window.location.origin === new URL(loginRedirectUrl).origin;
   const [email, setEmail] = useState(''),
     [sent, setSent] = useState(false),
     [token, setToken] = useState('');
@@ -1380,14 +1396,14 @@ function LoginForm() {
     [verified, setVerified] = useState(false);
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!supabase || !navigator.onLine) return;
+    if (!supabase || !navigator.onLine || !onLoginSite) return;
     setSaving(true);
     setError('');
     try {
       if (!sent) {
         const { error } = await supabase.auth.signInWithOtp({
           email: email.trim(),
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: loginRedirectUrl },
         });
         if (error) throw error;
         setSent(true);
@@ -1406,6 +1422,18 @@ function LoginForm() {
       setSaving(false);
     }
   }
+  if (!onLoginSite) {
+    return (
+      <div className="empty-state">
+        <LogIn size={35} />
+        <h3>Đăng nhập tại website chính</h3>
+        <p>Mở website chính, chọn Đăng nhập quản trị rồi yêu cầu gửi email tại đó. Sau đó mở liên kết trong email bằng cùng trình duyệt.</p>
+        <a className="btn btn-dark" href={loginRedirectUrl}>
+          Mở caulongteam.netlify.app <ArrowUpRight size={17} />
+        </a>
+      </div>
+    );
+  }
   return verified ? (
     <div className="empty-state">
       <CircleCheck size={35} />
@@ -1419,8 +1447,8 @@ function LoginForm() {
         <span>Một email. Một chiếc hẹn.</span>
       </div>
       <p className="form-intro">
-        Chỉ người quản trị cần đăng nhập email để quản lý lịch và thành viên.
-        Thành viên chọn tên trên trang chủ là có thể đăng ký ngay.
+        Dùng email đã liên kết với tài khoản quản trị. Mọi người chỉ cần chọn tên
+        để đăng ký, thêm buổi đánh và thêm thành viên.
       </p>
       {!configured && (
         <div className="alert">
@@ -1535,10 +1563,13 @@ function MemberForm({
     }
     if (
       await club.run(() =>
-        rpc('save_member', {
+        rpc(member ? 'save_member' : 'quick_create_member', member ? {
           p_id: member?.id ?? null,
           p_patch: patch,
           p_expected_version: member?.version ?? null,
+        } : {
+          p_member_id: club.memberId,
+          p_patch: patch,
         }),
       )
     )
@@ -1745,10 +1776,13 @@ function SessionForm({
     if (
       await club.run(
         () =>
-          rpc('save_session', {
+          rpc(original ? 'save_session' : 'quick_create_session', original ? {
             p_id: s?.id ?? null,
             p_patch: patch,
             p_expected_version: s?.version ?? null,
+          } : {
+            p_member_id: club.memberId,
+            p_patch: patch,
           }),
         !s && club.activities?.automatic_fees
           ? 'Đã tạo lịch đánh và bảng phí trống ở mục Tiền sân'
@@ -1991,7 +2025,7 @@ function SessionForm({
             </>
           )}
         </div>
-        {club.quickReady && (
+        {club.quickReady && club.account?.role === 'admin' && (
           <label className="field">
             Tên mẫu (nếu muốn dùng lại)
             <input
@@ -2038,7 +2072,7 @@ function SessionForm({
               Hủy buổi đánh
             </button>
           )}
-          {club.quickReady && (
+          {club.quickReady && club.account?.role === 'admin' && (
             <button
               className="btn btn-soft"
               type="submit"

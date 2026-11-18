@@ -2,6 +2,12 @@
 
 React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: **mở link → chọn tên → bấm Đi**. Phân công CS, tài chính và du lịch dùng danh tính đã xác minh bằng mã cá nhân hoặc tài khoản Supabase Auth.
 
+## Thêm buổi đánh và thành viên bằng tên
+
+Mọi người có thể chọn tên đang hoạt động rồi bấm **Tạo buổi đánh** hoặc **Thêm thành viên**, không cần đăng nhập quản trị. Nếu chưa chọn tên, nút thêm sẽ mở danh sách tên và tiếp tục đúng biểu mẫu sau khi chọn. Lịch sử ghi nhận người thực hiện với hậu tố “chọn tên”. Buổi mới vẫn có danh sách đăng ký và bảng phí trống tự động khi đã bật bản nâng cấp tài chính 004.
+
+Trên Supabase đang dùng, chạy [migration cho phép thêm bằng tên](./supabase/migrations/202611180001_name_selected_creation.sql) sau các migration phân công/tài chính đã cài, rồi triển khai frontend mới. Migration giữ nguyên dữ liệu cũ và có thể chạy lại. Đây là cơ chế nhóm tin cậy giống đăng ký nhanh; tên chọn không xác minh danh tính. Quyền sửa/xóa thành viên, chỉnh sửa đầy đủ buổi cũ, mẫu lịch, phân công và tài chính vẫn theo cơ chế hiện tại.
+
 ## Album đội
 
 Album chung có chế độ ảnh bay chậm/dừng chuyển động và lưới, xem ảnh lớn/vuốt/phóng to/tải ảnh, chọn nhiều file/kéo thả, chú thích và Thùng rác. Mọi khách đều quản lý được album; quyền lịch đánh và tài chính giữ nguyên. Ảnh gốc và thumbnail lưu trong Supabase Storage, metadata lưu PostgreSQL và đồng bộ qua Realtime riêng.
@@ -89,8 +95,8 @@ Danh sách ban đầu: Dũng, Trường, Hiền, Quyết, Yến, Chi, Nguyên, K
 ## Tạo quản trị viên đầu tiên
 
 1. Authentication → Providers → Email: bật email và cho phép đăng ký.
-2. Authentication → URL Configuration: khi chạy thử, Site URL là `http://127.0.0.1:5173`; thêm URL đó và `http://localhost:5173` vào Redirect URLs nếu dùng. Nếu Vite dùng cổng khác, thêm đúng URL/cổng. Khi triển khai, đặt domain HTTPS thật.
-3. Mở biểu tượng khiên trên máy tính hoặc menu → Đăng nhập quản trị trên điện thoại. Nhập email, mở link xác nhận trong cùng trình duyệt. Có thể thêm `{{ .Token }}` vào mẫu email Magic Link/Confirm Signup để dùng OTP.
+2. Authentication → URL Configuration: đặt **Site URL** là `https://caulongteam.netlify.app/` và thêm đúng `https://caulongteam.netlify.app/` vào **Redirect URLs**, rồi lưu. Mã frontend gửi rõ địa chỉ này trong `emailRedirectTo`. Cấu hình Auth nằm trong Supabase Dashboard, không được thay đổi bởi migration SQL. Nếu đổi tên miền, cập nhật cả cấu hình Auth và hằng `loginRedirectUrl` trong [src/lib.ts](./src/lib.ts).
+3. Mở `https://caulongteam.netlify.app/`, chọn biểu tượng khiên trên máy tính hoặc menu → Đăng nhập quản trị trên điện thoại. Nhập email, mở link xác nhận trong cùng trình duyệt. Phiên bản chạy thử sẽ hướng dẫn mở website chính trước khi gửi email: luồng PKCE lưu mã xác nhận trên chính tên miền bắt đầu đăng nhập. Mẫu email **Magic Link / Confirm signup** nên dùng `<a href="{{ .ConfirmationURL }}">Đăng nhập</a>`; có thể thêm `{{ .Token }}` để nhập OTP. Sau khi sửa cấu hình, yêu cầu gửi email mới; liên kết cũ vẫn giữ địa chỉ trước đó.
 4. Trong SQL Editor, tìm mã đúng người:
 
    ```sql
@@ -116,7 +122,7 @@ Danh sách ban đầu: Dũng, Trường, Hiền, Quyết, Yến, Chi, Nguyên, K
    where user_id=(select id from auth.users where lower(email)=lower('EMAIL_QUAN_TRI_CUA_BAN'));
    ```
 
-6. Tải lại web. Xuất hiện nút tạo lịch, quản lý thành viên, lịch sử. Liên kết email cho thành viên thường không còn bắt buộc.
+6. Tải lại web. Tài khoản quản trị có thể chỉnh sửa đầy đủ, quản lý tài khoản và xem lịch sử. Mọi thành viên đã chọn tên có thể thêm lịch và thành viên sau khi cài migration thêm bằng tên ở trên. Liên kết email cho thành viên thường không còn bắt buộc.
 
 Email mặc định Supabase có hạn mức và giới hạn người nhận. Nếu email quản trị không nhận được thư hoặc cần nhiều email quản trị, cấu hình Custom SMTP. Thành viên đăng ký nhanh không phụ thuộc SMTP.
 

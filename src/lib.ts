@@ -8,6 +8,7 @@ import type {
 
 const url = import.meta.env?.VITE_SUPABASE_URL;
 const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY;
+export const loginRedirectUrl = 'https://caulongteam.netlify.app/';
 export const configured = !!(
   url?.startsWith('https://') &&
   key &&
@@ -28,7 +29,14 @@ export async function rpc<T = unknown>(
   if (!navigator.onLine)
     throw new Error('Bạn đang mất mạng. Dữ liệu chưa được lưu.');
   const { data, error } = await supabase.rpc(name, args);
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (
+      error.code === 'PGRST202' &&
+      (name === 'quick_create_member' || name === 'quick_create_session')
+    )
+      throw new Error('Máy chủ chưa bật tính năng thêm buổi đánh và thành viên bằng tên. Cần cập nhật hệ thống trước khi lưu.');
+    throw new Error(error.message);
+  }
   return data as T;
 }
 export function message(error: unknown) {

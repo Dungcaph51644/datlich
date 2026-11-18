@@ -434,5 +434,67 @@ test('Automatic fee sheets: atomic schedule creation, pristine grouping, audit a
     },
   );
 
+  await t.test('Selected names can create members and sessions without accounts, preserving automatic fees and attribution', async () => {
+    const before = await snap();
+    await migrate('202611180001_name_selected_creation.sql');
+    await migrate('202611180001_name_selected_creation.sql'); // safe to rerun
+    await asGuest();
+    for (const actor of [null, '00000000-0000-4000-8000-000000000000']) {
+      await assert.rejects(() => call('quick_create_member', [actor, { display_name: 'Rejected' }]), /chọn một thành viên/);
+      await assert.rejects(() => call('quick_create_session', [actor, {}]), /chọn một thành viên/);
+    }
+    const mid = await call<string>('quick_create_member', [ids.Hiền, { display_name: '  Bạn mới  ', note: 'Tham gia cùng nhóm' }]);
+    const member = (await snap()).club.members.find((m: any) => m.id === mid);
+    assert.equal(member.display_name, 'Bạn mới');
+    assert.equal(member.active, true);
+    assert.match(member.code, /^CL-\d+$/);
+    assert.equal(member.version, 1);
+    for (const patch of [null, [], { display_name: '' }, { display_name: 'A', role: 'admin' }, { display_name: 'A', id: ids.Hiền }]) {
+      await assert.rejects(() => call('quick_create_member', [mid, patch]));
+    }
+    const patch = {
+      session_date: '2099-06-03', start_time: '18:00', end_time: '20:00',
+      venue: 'Sân do thành viên tạo', court: 'Ca mới', booking_status: 'booked',
+      organizer_mode: 'override', organizer_id: mid, estimated_cost: 250000,
+    };
+    const sid = await call<string>('quick_create_session', [mid, patch]);
+    const snapshot = await snap();
+    const created = snapshot.club.sessions.find((s: any) => s.id === sid);
+    assert.equal(created.organizer_id, mid);
+    assert.equal(created.booked_by_member_id, mid);
+    assert.equal(created.estimated_cost, 250000);
+    assert.equal(created.going_count, 0);
+    assert.ok(snapshot.club.roster.some((r: any) => r.session_id === sid && r.member_id === mid));
+    assert.ok(!snapshot.club.attendance.some((a: any) => a.session_id === sid));
+    assert.ok(snapshot.activities.every((a: any) => !a.can_manage && !a.groups && !a.ledger));
+    const audit = await ownerQuery('select actor_name from public.audit_log where record_id=$1 and action=\'INSERT\'', [sid]);
+    assert.equal(audit[0].actor_name, 'Bạn mới · chọn tên');
+    const memberAudit = await ownerQuery('select actor_name from public.audit_log where record_id=$1', [mid]);
+    assert.equal(memberAudit[0].actor_name, 'Hiền · chọn tên');
+    const fee = await sheet(sid);
+    assert.equal(fee.auto_created, true);
+    assert.equal(fee.fee_status, 'draft');
+    assert.equal(fee.expenses.length, 0);
+    assert.equal(fee.ledger.length, 0);
+    assert.equal(fee.history[0].actor_member_id, mid);
+    await asGuest();
+    await assert.rejects(() => call('save_member', [mid, { active: false }, 1]), /permission denied/);
+    await assert.rejects(() => call('save_session', [sid, { venue: 'Forbidden' }, 1]), /permission denied/);
+    await assert.rejects(() => call('record_activity_payment', [fee.id, mid, 'collection', 100, '30000000-0000-4000-8000-000000000099', '', null]), /xác minh/);
+    for (const invalid of [{ ...patch, end_time: '17:00' }, { ...patch, id: sid }, { ...patch, going_count: 10 }]) {
+      await assert.rejects(() => call('quick_create_session', [mid, invalid]));
+    }
+    const inactive = await call<string>('quick_create_member', [mid, { display_name: 'Nghỉ', active: false }]);
+    await assert.rejects(() => call('quick_create_member', [inactive, { display_name: 'Rejected' }]), /chọn một thành viên/);
+    await assert.rejects(() => call('quick_create_session', [inactive, patch]), /chọn một thành viên/);
+    await assert.rejects(() => call('quick_create_session', [mid, { ...patch, court: 'Rollback test quick' }]), /forced group failure/);
+    const after = await snap();
+    assert.equal(after.club.sessions.length, before.club.sessions.length + 1);
+    assert.equal(after.activities.length, before.activities.length + 1);
+    // Existing verified/admin writes and fee creation continue after upgrade.
+    await asAdmin();
+    assert.ok(await session('Admin after upgrade', '2099-06-04'));
+  });
+
   await db.close();
 });
