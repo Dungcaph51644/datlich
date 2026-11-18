@@ -548,6 +548,7 @@ export default function App() {
                     </button>
                     {club.bookingReady &&
                       (isAdmin ||
+                        club.me ||
                         club.booking?.verified_member_id ===
                           next.organizer_id) && (
                         <button
@@ -1103,6 +1104,11 @@ export default function App() {
             <BookingSessionEditor
               session={modal.session}
               club={club}
+              limited={
+                !isAdmin &&
+                club.booking?.verified_member_id !==
+                  modal.session.organizer_id
+              }
               close={closeModal}
             />
           )}
@@ -1275,10 +1281,11 @@ function SessionCard({
           {shortTime(s.start_time)} <span>–</span> {shortTime(s.end_time)}
         </strong>
         {(club.account?.role === 'admin' ||
-          (club.booking?.verified_member_id === s.organizer_id &&
-            !!s.organizer_id &&
-            new Date(`${s.session_date}T${s.end_time}+07:00`) >
-              new Date())) && (
+          (club.bookingReady &&
+            new Date(`${s.session_date}T${s.end_time}+07:00`) > new Date() &&
+            (!!club.me ||
+              (club.booking?.verified_member_id === s.organizer_id &&
+                !!s.organizer_id)))) && (
           <button
             className="icon-btn"
             aria-label={`Sửa ${s.venue} ${s.court}`}
@@ -2130,8 +2137,10 @@ function AttendancePanel({
           <SessionResponsibility session={s} />
           {club.bookingReady &&
             (club.account?.role === 'admin' ||
-              (!!s.organizer_id &&
-                club.booking?.verified_member_id === s.organizer_id)) && (
+              (new Date(`${s.session_date}T${s.end_time}+07:00`) > new Date() &&
+                (!!club.me ||
+                  (!!s.organizer_id &&
+                    club.booking?.verified_member_id === s.organizer_id)))) && (
               <button
                 className="btn btn-soft"
                 disabled={!club.online || club.saveState === 'saving'}

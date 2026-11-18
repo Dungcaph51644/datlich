@@ -72,9 +72,9 @@ npm run check:connection  # Kiểm tra API đăng ký nhanh
 - **Nhiều ca một lần:** mở Đăng ký nhiều ca / sân ở lịch tuần, chọn các ca và trạng thái. Mỗi ca có kết quả riêng: ca còn chỗ được lưu, ca đầy/đã hủy/hết hạn báo lý do và vẫn được chọn để xử lý tiếp. Không báo thành công toàn bộ nếu có ca thất bại.
 - **Mẫu lịch:** quản trị điền sân/giờ rồi chọn Lưu thành mẫu. Lần sau tạo buổi, chọn mẫu để điền sẵn. Ngày theo ngày đang chọn, đặt sân về Chưa đặt, hạn đăng ký trống, không có đăng ký cũ. Lưu cùng tên cập nhật mẫu đó.
 - **Sao chép tuần:** ca chưa hủy chuyển +7 ngày, hạn +7 ngày, đặt sân về Chưa đặt, không sao chép xác nhận/ghi chú tham gia.
-- **Đặt sân:** người phụ trách cập nhật trạng thái; website không tự đặt sân với chủ sân.
+- **Đặt sân:** người đã chọn tên thành viên có thể mở **Cập nhật đặt sân** để sửa ngày/giờ, địa điểm, sân, bản đồ và trạng thái Chưa đặt/Đã đặt/Đã hủy. Thay đổi đồng bộ cho cả nhóm; không sửa được phân công, chi phí hoặc ghi chú nội bộ. Đây là chế độ nhóm tin cậy: tên chọn không xác minh danh tính, người có link có thể tự nhận ID thành viên đang hoạt động qua API. Không dùng chức năng này làm quyền bảo mật cho dữ liệu nhạy cảm. Website không tự liên hệ hay đặt sân với chủ sân.
 
-Mỗi ngày/khung giờ/sân là một mục riêng. Mọi thời gian là giờ Việt Nam (UTC+7). Buổi đã hủy hoặc kết thúc không nhận thay đổi. Sau hạn đăng ký, chỉ quản trị viên được sửa thay.
+Mỗi ngày/khung giờ/sân là một mục riêng. Mọi thời gian là giờ Việt Nam (UTC+7). Buổi đã kết thúc không nhận thay đổi; ngoại lệ, cập nhật thông tin đặt sân giới hạn vẫn dùng được sau hạn đăng ký cho đến khi buổi kết thúc. Các chỉnh sửa khác sau hạn cần quản trị viên.
 
 ## Thiết lập Supabase mới
 
@@ -144,7 +144,7 @@ Frontend nhận INSERT/UPDATE/DELETE qua Realtime, gom sự kiện 120ms rồi l
 
 Đã bổ sung trang **Phân công CS**, phụ trách tuần này/tuần sau trên trang chủ, nhãn CS theo ID trong đăng ký, đổi lượt có đồng ý, đề xuất lịch công bằng, vòng đủ điều kiện, lịch sử ban đầu và thông báo trong website. Phân công không đồng nghĩa Đã đặt; thông tin người đã đặt thực tế được lưu riêng. Mã cá nhân dùng một lần xác minh quyền đặt sân, không cần email cho thành viên; chọn tên đăng ký nhanh không cấp quyền này.
 
-**Khi nâng cấp một backend khác**, chạy [migration phân công CS](./supabase/migrations/202611100002_booking_responsibility.sql), gồm cả phần REALTIME cuối file. Không cần thay hai biến môi trường hoặc thêm khóa bí mật. Backend của nhóm đã xác nhận có 7 tuần, 11 người trong vòng và publication Realtime CS đang bật. Admin cấp mã và nhập/xác nhận lịch sử ban đầu cho các thành viên đủ điều kiện trước khi đề xuất lịch.
+**Khi nâng cấp một backend khác**, chạy [migration phân công CS](./supabase/migrations/202611100002_booking_responsibility.sql), gồm cả phần REALTIME cuối file, rồi chạy [migration cho thành viên cập nhật thông tin đặt sân](./supabase/migrations/202611110005_member_booking_edits.sql). Không cần thay hai biến môi trường hoặc thêm khóa bí mật. Backend của nhóm đã xác nhận có 7 tuần, 11 người trong vòng và publication Realtime CS đang bật. Admin cấp mã và nhập/xác nhận lịch sử ban đầu cho các thành viên đủ điều kiện trước khi đề xuất lịch.
 
 [Hướng dẫn đầy đủ: cấu hình, cấp mã, phân công, đổi lượt, số lượt ban đầu và nghiệm thu hai trình duyệt](./docs/booking-responsibility.md).
 

@@ -6,7 +6,7 @@ Không cần thêm biến môi trường, service-role key, SMTP hoặc bật đ
 
 1. Mở dự án Supabase → **SQL Editor → New query**.
 2. Mở và sao chép **toàn bộ** [migration CS](../supabase/migrations/202611100002_booking_responsibility.sql), rồi bấm **Run**. File này chạy sau hai migration cũ; dự án đang dùng đăng ký nhanh đã có hai bản đó. Giữ cả `begin`, khối `REALTIME` và `commit` ở cuối file.
-3. Tải lại website, mở **Phân công CS**. Trang chủ sẽ có phụ trách tuần này và tuần sau. Kiểm tra bằng terminal:
+3. Chạy [migration cập nhật đặt sân cho thành viên](../supabase/migrations/202611110005_member_booking_edits.sql) trong SQL Editor sau migration CS; migration này mở RPC giới hạn cho thành viên đã chọn tên. Tải lại website, mở **Phân công CS**. Trang chủ sẽ có phụ trách tuần này và tuần sau. Kiểm tra bằng terminal:
 
    ```sh
    npm run check:connection
@@ -18,7 +18,7 @@ Không cần thêm biến môi trường, service-role key, SMTP hoặc bật đ
 5. Trong **Phân công CS → Vòng phân công**, bấm **Cấp mã cá nhân** cạnh đúng thành viên. Kiểm tra mã thành viên khi trùng tên; gửi riêng mã cho đúng người bằng cách liên lạc hiện có của nhóm. Website không tự gửi Zalo.
 6. Thành viên bấm **Nhập mã**, dán mã một lần. Mã có hiệu lực 7 ngày và chỉ dùng một lần; phiên thiết bị có hiệu lực 180 ngày. Mỗi thiết bị mới cần mã mới. Khi cấp mã, admin có thể chọn thu hồi tất cả thiết bị cũ của người đó. Thành viên ngừng hoạt động bị thu hồi các phiên này.
 
-Chọn tên để đăng ký đánh cầu **không xác minh quyền đặt sân**. Đổi lượt, xử lý thông báo và cập nhật sân sử dụng danh tính đã được máy chủ xác minh, hiển thị rõ trên màn hình. Đổi tên đang chọn không đổi danh tính này. Nếu đang đăng nhập Supabase Auth có liên kết thành viên, danh tính Auth được ưu tiên; muốn thử thành viên khác, dùng phiên trình duyệt độc lập đã đăng xuất quản trị.
+Chọn tên để đăng ký đánh cầu **không xác minh danh tính cá nhân**. Đổi lượt và xử lý thông báo cần danh tính đã được máy chủ xác minh. Riêng sửa thông tin dùng chung của sân (ngày/giờ, sân/địa điểm/bản đồ và trạng thái) cho phép người đã chọn một thành viên đang hoạt động; không mở quyền sửa phân công, chi phí, ghi chú đặt cọc hay thông tin nội bộ. Trạng thái gồm Chưa đặt, Đã đặt và Đã hủy; hủy sẽ khóa đăng ký của buổi. Đây là chế độ nhóm tin cậy: người có link có thể gọi API và tự khai ID của bất kỳ thành viên đang hoạt động, nên không coi lựa chọn tên là cơ chế bảo mật. Thành viên đã chọn tên cũng không có quyền đổi lượt hay chỉnh lịch sử. Đổi tên đang chọn không đổi danh tính đã xác minh. Nếu đang đăng nhập Supabase Auth có liên kết thành viên, danh tính Auth được ưu tiên cho các thao tác cần xác minh.
 
 Migration có thể chạy lại. Các tuần đã có, danh sách đủ điều kiện đã sửa và lịch sử ban đầu đã nhập không bị ghi đè. Khởi tạo chỉ diễn ra trong migration hoặc lệnh quản trị rõ ràng, không diễn ra mỗi lần mở ứng dụng.
 
@@ -77,6 +77,7 @@ Các trạng thái: Chờ phản hồi, Đã chấp nhận, Đã từ chối, Đ
 - Đổi người tuần không sửa người đã đặt thực tế, trạng thái sân, địa chỉ, sân, tiền, đặt cọc, đăng ký hoặc ghi chú tham gia. Lịch sử từng lần xác nhận sân được giữ riêng.
 - Dữ liệu cũ có Đã đặt giữ người phụ trách cũ làm thông tin người đặt đã biết. Không tự gán thời điểm đặt trước đây; lịch sử ghi rõ đây là dữ liệu được giữ khi nâng cấp. Người phụ trách cũ khác người của tuần được bảo toàn thành chỉ định riêng.
 - CS chọn Không đi vẫn giữ trách nhiệm. CS cập nhật sân/ngày giờ/tiền dự kiến/liên hệ/cọc của buổi mình phụ trách sau xác minh; đổi người, tạo buổi, hạn đăng ký và giới hạn người thuộc quản trị. Đổi ngày sang tuần của người khác cần admin.
+- Thành viên đã chọn tên có thể cập nhật ngày/giờ, sân/địa chỉ/bản đồ và trạng thái sân cho buổi chưa kết thúc. RPC chỉ nhận các trường này, giữ nguyên đăng ký/người đã đặt/chi phí/ghi chú và kiểm tra phiên bản để tránh ghi đè đồng thời. Có thể mở lại buổi Đã hủy bằng cách đổi trạng thái về Chưa đặt hoặc Đã đặt.
 - Sao chép lịch sang tuần sau lấy người tuần mới cho buổi kế thừa, giữ chỉ định riêng, đặt lại Chưa đặt, bỏ xác nhận/tiền cọc thực tế và không sao chép đăng ký cũ.
 
 ## Database và Realtime

@@ -334,6 +334,47 @@ test('Responsible person patches only the booking field just edited', async () =
     p_expected_version: 1,
   });
 });
+test('A selected member edits only schedule fields and may update the court status', async () => {
+  let name = '';
+  let args: Record<string, unknown> | undefined;
+  let closed = false;
+  const c = fixture({
+    bookingRpc: (async (rpcName, received) => {
+      name = rpcName;
+      args = received;
+      return 'court';
+    }) as Club['bookingRpc'],
+  });
+  render(
+    <BookingSessionEditor
+      session={session}
+      club={c}
+      limited
+      close={() => {
+        closed = true;
+      }}
+    />,
+  );
+  assert.equal(screen.queryByLabelText('Tiền sân dự kiến (đồng)'), null);
+  assert.equal(screen.queryByLabelText('Ghi chú liên hệ đặt sân'), null);
+  fireEvent.change(screen.getByLabelText('Tên sân'), {
+    target: { value: 'Sân mới' },
+  });
+  fireEvent.change(screen.getByLabelText('Trạng thái sân'), {
+    target: { value: 'cancelled' },
+  });
+  fireEvent.submit(
+    screen.getByRole('button', { name: 'Lưu thông tin sân' }).closest('form')!,
+  );
+  await waitFor(() => assert.equal(closed, true));
+  assert.equal(name, 'quick_update_booking_session');
+  assert.deepEqual(args, {
+    p_id: 'court',
+    p_member_id: 'b',
+    p_patch: { venue: 'Sân mới', booking_status: 'cancelled' },
+    p_expected_version: 1,
+  });
+});
 test('Proposal clearly distinguishes unknown history from confirmed zero and cannot start with unknown active eligible people', () => {
   const c = fixture(
     { account: { user_id: 'admin', member_id: 'a', role: 'admin' } },

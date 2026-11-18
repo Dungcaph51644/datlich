@@ -1840,10 +1840,12 @@ export function BookingSessionEditor({
   session: s,
   club,
   close,
+  limited = false,
 }: {
   session: CourtSession;
   club: Club;
   close: () => void;
+  limited?: boolean;
 }) {
   const [error, setError] = useState('');
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -1872,11 +1874,18 @@ export function BookingSessionEditor({
     if (
       await club.run(
         () =>
-          club.bookingRpc('update_booking_session', {
-            p_id: s.id,
-            p_patch: patch,
-            p_expected_version: s.version,
-          }),
+          limited
+            ? club.bookingRpc('quick_update_booking_session', {
+                p_id: s.id,
+                p_member_id: club.memberId,
+                p_patch: patch,
+                p_expected_version: s.version,
+              })
+            : club.bookingRpc('update_booking_session', {
+                p_id: s.id,
+                p_patch: patch,
+                p_expected_version: s.version,
+              }),
         'Đã cập nhật thông tin đặt sân',
       )
     )
@@ -1884,10 +1893,11 @@ export function BookingSessionEditor({
   }
   return (
     <form onSubmit={(e) => void submit(e)}>
-      <SessionResponsibility session={s} />
+      {!limited && <SessionResponsibility session={s} />}
       <p className="form-intro">
-        Cập nhật thông tin sau khi liên hệ chủ sân. Phân công và đăng ký Đi /
-        Không đi là hai việc độc lập.
+        {limited
+          ? 'Thành viên đã chọn tên có thể giúp cập nhật ngày giờ, địa điểm và trạng thái sân. Hãy xác nhận thay đổi với người phụ trách trước khi lưu.'
+          : 'Cập nhật thông tin sau khi liên hệ chủ sân. Phân công và đăng ký Đi / Không đi là hai việc độc lập.'}
       </p>
       <div className="form-grid">
         <label className="field">
@@ -1943,45 +1953,49 @@ export function BookingSessionEditor({
           Google Maps
           <input name="maps_url" type="url" defaultValue={s.maps_url} />
         </label>
-        <label className="field span-2">
-          Tiền sân dự kiến (đồng)
-          <input
-            name="estimated_cost"
-            type="number"
-            min={0}
-            max={999999999999}
-            step={1000}
-            defaultValue={s.estimated_cost ?? ''}
-            placeholder="Chưa có dự kiến"
-          />
-        </label>
-        <label className="field span-2">
-          Ghi chú liên hệ đặt sân
-          <textarea
-            name="booking_contact_note"
-            rows={2}
-            maxLength={2000}
-            defaultValue={s.booking_contact_note ?? ''}
-          />
-        </label>
-        <label className="field span-2">
-          Ghi chú đặt cọc
-          <textarea
-            name="deposit_note"
-            rows={2}
-            maxLength={2000}
-            defaultValue={s.deposit_note ?? ''}
-          />
-        </label>
-        <label className="field span-2">
-          Ghi chú cho buổi đánh
-          <textarea
-            name="note"
-            rows={2}
-            maxLength={2000}
-            defaultValue={s.note}
-          />
-        </label>
+        {!limited && (
+          <>
+            <label className="field span-2">
+              Tiền sân dự kiến (đồng)
+              <input
+                name="estimated_cost"
+                type="number"
+                min={0}
+                max={999999999999}
+                step={1000}
+                defaultValue={s.estimated_cost ?? ''}
+                placeholder="Chưa có dự kiến"
+              />
+            </label>
+            <label className="field span-2">
+              Ghi chú liên hệ đặt sân
+              <textarea
+                name="booking_contact_note"
+                rows={2}
+                maxLength={2000}
+                defaultValue={s.booking_contact_note ?? ''}
+              />
+            </label>
+            <label className="field span-2">
+              Ghi chú đặt cọc
+              <textarea
+                name="deposit_note"
+                rows={2}
+                maxLength={2000}
+                defaultValue={s.deposit_note ?? ''}
+              />
+            </label>
+            <label className="field span-2">
+              Ghi chú cho buổi đánh
+              <textarea
+                name="note"
+                rows={2}
+                maxLength={2000}
+                defaultValue={s.note}
+              />
+            </label>
+          </>
+        )}
       </div>
       {error && (
         <p className="form-error" role="alert">

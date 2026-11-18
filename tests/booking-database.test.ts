@@ -42,6 +42,7 @@ test('PostgreSQL: weekly responsibility, verified identities, atomic swaps and f
   ]);
   const migration = '202611100002_booking_responsibility.sql';
   await migrate(migration);
+  await migrate('202611110005_member_booking_edits.sql');
   async function asAdmin() {
     await db.exec('reset role');
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [
@@ -523,6 +524,95 @@ test('PostgreSQL: weekly responsibility, verified identities, atomic swaps and f
         ]),
         /thiết bị khác/,
       );
+    },
+  );
+  await t.test(
+    'An active selected member may update only shared schedule fields and booking status',
+    async () => {
+      await asGuest();
+      let session = (await snapshot()).club.sessions.find(
+        (x: any) => x.id === sid,
+      );
+      await call('quick_update_booking_session', [
+        sid,
+        ids.Hiền,
+        {
+          venue: 'Sân mới',
+          start_time: '19:00:00',
+          end_time: '21:00:00',
+          booking_status: 'cancelled',
+        },
+        session.version,
+      ]);
+      session = (await snapshot()).club.sessions.find(
+        (x: any) => x.id === sid,
+      );
+      assert.equal(session.venue, 'Sân mới');
+      assert.equal(session.start_time, '19:00:00');
+      assert.equal(session.booking_status, 'cancelled');
+      assert.equal(session.booked_by_member_id, ids.Nguyên);
+      assert.equal(
+        (await snapshot()).club.attendance.find(
+          (x: any) =>
+            x.session_id === sid && x.member_id === ids.Nguyên,
+        ).note,
+        'Giữ ghi chú',
+      );
+
+      await call('quick_update_booking_session', [
+        sid,
+        ids.Hiền,
+        { booking_status: 'booked' },
+        session.version,
+      ]);
+      session = (await snapshot()).club.sessions.find(
+        (x: any) => x.id === sid,
+      );
+      assert.equal(session.booking_status, 'booked');
+      assert.equal(session.booked_by_member_id, ids.Nguyên);
+
+      await assert.rejects(
+        call('quick_update_booking_session', [
+          sid,
+          '00000000-0000-4000-8000-000000000099',
+          { venue: 'Không hợp lệ' },
+          session.version,
+        ]),
+        /thành viên đang hoạt động/,
+      );
+      for (const patch of [
+        { organizer_id: ids.Hiền },
+        { estimated_cost: 1 },
+        { booking_contact_note: 'Nội bộ' },
+      ])
+        await assert.rejects(
+          call('quick_update_booking_session', [
+            sid,
+            ids.Hiền,
+            patch,
+            session.version,
+          ]),
+          /chỉ được cập nhật/,
+        );
+      await assert.rejects(
+        call('quick_update_booking_session', [
+          sid,
+          ids.Hiền,
+          { venue: 'Bản cũ' },
+          session.version - 1,
+        ]),
+        { code: 'PT409' },
+      );
+
+      await db.exec('reset role');
+      const history = await db.query(
+        `select actor_member_id,event_type from public.booking_history
+         where session_id=$1 order by id desc limit 1`,
+        [sid],
+      );
+      assert.equal(history.rows[0].actor_member_id, ids.Hiền);
+      assert.equal(history.rows[0].event_type, 'court_confirmed');
+      await asGuest();
     },
   );
   await t.test(
