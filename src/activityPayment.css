@@ -21,6 +21,20 @@
   flex: 1;
   min-width: 0;
 }
+.payment-card-thumbnail {
+  flex: 0 0 64px;
+  padding: 4px;
+  border: 1px solid #d9e3d4;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.payment-card-thumbnail img {
+  display: block;
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+}
 .payment-card-copy h3 {
   margin: 0 0 5px;
   font-size: 17px;
@@ -300,6 +314,13 @@
 .fee-person-actions {
   flex-wrap: wrap;
 }
+.organizer-payment-note {
+  display: block;
+  margin-top: 5px;
+  color: #52703e;
+  font-size: 11px;
+  line-height: 1.5;
+}
 @media (max-width: 600px) {
   .activity-payment {
     align-items: flex-start;
@@ -308,11 +329,12 @@
     flex-wrap: wrap;
   }
   .payment-card-copy {
-    flex-basis: calc(100% - 60px);
+    flex-basis: calc(100% - 80px);
   }
   .payment-card-actions {
     flex: 1 0 100%;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: space-between;
   }
   .payment-card-actions .btn {

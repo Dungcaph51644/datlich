@@ -1,6 +1,7 @@
 import {
   lazy,
   Suspense,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -91,6 +92,7 @@ import { navigateRoute, routeMonday, routeUrl, useAppRoute, type AppPage } from 
 import { matchesSearch } from './search';
 import { copyText } from './userActions';
 import { MyTasks } from './MyTasks';
+import { ClubMascot, useMascotPreferences } from './ClubMascot';
 import './myTasks.css';
 import { mergeConflictFields, memberFormValues, sessionFormValues, VersionConflict } from './VersionConflict';
 
@@ -100,7 +102,6 @@ const ActivitiesPage = lazy(() =>
   })),
 );
 const TeamAlbumPage = lazy(() => import('./TeamAlbumPage'));
-const ClubChat = lazy(() => import('./ClubChat'));
 type Club = ReturnType<typeof useClub>;
 type ModalState =
   | { type: 'login' }
@@ -133,6 +134,9 @@ export default function App() {
   const setDay = (value: string | null) => navigateRoute({ page: 'schedule', day: value ?? undefined });
   const [sessionFilter, setSessionFilter] = useState<'all' | 'pending' | 'going'>('all');
   const [motionEnabled, setMotionEnabled] = useMotionPreference();
+  const [mascotPreferences, updateMascotPreferences] = useMascotPreferences();
+  const [mascotWelcomed, setMascotWelcomed] = useState(false);
+  const markMascotWelcomed = useCallback(() => setMascotWelcomed(true), []);
   useSportMotion(page, week, motionEnabled);
   const isAdmin = club.account?.role === 'admin';
   const mine = club.me;
@@ -1030,12 +1034,32 @@ export default function App() {
         <span>
           Chung đam mê. Bền tình bạn. <span className="footer-dot">●</span>
         </span>
+        <button
+          type="button"
+          className="mascot-footer-toggle"
+          aria-pressed={!mascotPreferences.hidden}
+          onClick={() => updateMascotPreferences({ hidden: !mascotPreferences.hidden })}
+        >
+          <img src="/shuttle.svg" alt="" width={14} height={14} />
+          {mascotPreferences.hidden ? 'Hiện linh vật Cầu Cầu' : 'Ẩn linh vật Cầu Cầu'}
+        </button>
       </footer>
-      <Suspense fallback={null}>
-        <ClubChat memberName={club.me?.display_name ?? null} identityKey={`${club.memberId ?? ''}:${club.user?.id ?? ''}:${club.booking?.verified_member_id ?? ''}`}
-          online={club.online} onChoose={() => setModal({ type: 'choose' })}
-          ask={(text, history, signal) => club.askChat(text, history, { sessionId: route.session, activityId: route.activity }, signal)} />
-      </Suspense>
+      <ClubMascot
+        key={`${club.memberId ?? ''}:${club.user?.id ?? ''}:${club.booking?.verified_member_id ?? ''}`}
+        data={club}
+        memberId={club.memberId}
+        moment={club.registrationEvent}
+        ready={!club.loading && club.online && !club.error && club.quickReady}
+        motionEnabled={motionEnabled}
+        preferences={mascotPreferences}
+        welcomePending={!mascotWelcomed}
+        onWelcome={markMascotWelcomed}
+        onPreferences={updateMascotPreferences}
+        onOpenSession={(id) => {
+          const session = club.sessions.find((s) => s.id === id);
+          if (session) openAttendance(session);
+        }}
+      />
       {club.notice && (
         <div
           className={`toast ${club.saveState === 'failed' ? 'toast-error' : ''}`}

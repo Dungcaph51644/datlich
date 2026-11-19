@@ -7,6 +7,10 @@ import type {
   ActivityPaymentSettings,
   ClubActivity,
 } from '../src/activityTypes';
+import { effectivePaid } from '../src/activityTypes';
+import { buildActivityCsv, buildActivityMessage } from '../src/financeExport';
+import { myTaskData } from '../src/MyTasks';
+import { EMPTY } from '../src/types';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   url: 'https://test.invalid/',
 });
@@ -49,6 +53,8 @@ const { render, screen, fireEvent, waitFor, cleanup, act, within } =
   await import('@testing-library/react');
 const { ActivityPayment, PaymentSettingsForm, PaymentSheet } =
   await import('../src/ActivityPayment');
+const { MemberPaymentQr, MemberPaymentQrForm } =
+  await import('../src/MemberPaymentQr');
 type Club = ReturnType<typeof useClub>;
 const first = 'qr/10000000-0000-4000-8000-000000000001.png',
   second = 'qr/10000000-0000-4000-8000-000000000002.png';
@@ -135,6 +141,183 @@ function fixture(overrides: Partial<Club> = {}) {
 afterEach(() => {
   cleanup();
   copies.length = 0;
+});
+test('Personal QR follows verified identity even when a different name is selected; saving requires only an image', async () => {
+  let finishUpload!: (path: string) => void;
+  let uploads = 0;
+  const profile = { member_id: 'a', version: 0, qr_path: null };
+  const { club, calls } = fixture({
+    members: [
+      { id: 'a', display_name: 'Yến', active: true },
+    ] as Club['members'],
+    activities: {
+      version: 1,
+      revision: 1,
+      activities: [],
+      personal_payment_qr: profile,
+    },
+    uploadMemberPaymentQr: async () => {
+      uploads++;
+      return new Promise<string>((resolve) => {
+        finishUpload = resolve;
+      });
+    },
+  });
+  render(<MemberPaymentQr club={club} />);
+  assert.match(screen.getByRole('heading').textContent ?? '', /Yến/);
+  fireEvent.click(screen.getByRole('button', { name: 'Tải QR cá nhân' }));
+  const file = new dom.window.File(['png'], 'my-qr.png', { type: 'image/png' });
+  fireEvent.change(screen.getByLabelText('Chọn ảnh QR cá nhân'), {
+    target: { files: [file] },
+  });
+  assert.match(
+    screen.getByAltText('QR cá nhân xem trước').getAttribute('src') ?? '',
+    /^blob:/,
+  );
+  assert.equal(document.querySelector('[name="account_number"]'), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu QR cá nhân' }));
+  await waitFor(() => assert.equal(uploads, 1));
+  assert.equal(calls.length, 0);
+  await act(async () => finishUpload(second));
+  await waitFor(() => assert.equal(calls.length, 1));
+  assert.deepEqual(calls[0], {
+    name: 'save_member_payment_qr',
+    args: { p_path: second, p_expected_version: 0 },
+  });
+});
+test('Personal QR replacement retries the confirmed upload; conflicting versions require review before deleting', async () => {
+  let uploads = 0,
+    attempts = 0;
+  const { club, calls } = fixture({
+    uploadMemberPaymentQr: async () => {
+      uploads++;
+      return second;
+    },
+    bookingRpc: async (name, args) => {
+      attempts++;
+      if (attempts === 1) throw new Error('Mạng gián đoạn');
+      calls.push({ name, args });
+      return null;
+    },
+  });
+  let profile = { member_id: 'a', version: 1, qr_path: first };
+  const ui = render(
+    <MemberPaymentQrForm club={club} profile={profile} close={() => {}} />,
+  );
+  fireEvent.change(screen.getByLabelText('Chọn ảnh QR cá nhân'), {
+    target: {
+      files: [new dom.window.File(['png'], 'qr.png', { type: 'image/png' })],
+    },
+  });
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu QR cá nhân' }));
+  await screen.findByText('Mạng gián đoạn');
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu QR cá nhân' }));
+  await waitFor(() => assert.equal(calls.length, 1));
+  assert.equal(uploads, 1);
+  profile = { ...profile, version: 2, qr_path: second };
+  ui.rerender(
+    <MemberPaymentQrForm club={club} profile={profile} close={() => {}} />,
+  );
+  assert.equal(
+    (
+      screen.getByRole('button', {
+        name: 'Lưu QR cá nhân',
+      }) as HTMLButtonElement
+    ).disabled,
+    true,
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Dùng bản mới' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Xóa QR' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu QR cá nhân' }));
+  await waitFor(() => assert.equal(calls.length, 2));
+  assert.deepEqual(calls[1].args, { p_path: null, p_expected_version: 2 });
+});
+test('Creating an activity override starts empty and retains the inherited version after a prior reset', async () => {
+  const { club, calls } = fixture();
+  render(
+    <PaymentSettingsForm
+      club={club}
+      activity={{ ...a, payment: { ...payment, source: 'member', version: 7 } }}
+      close={() => {}}
+    />,
+  );
+  assert.equal(
+    (document.querySelector('[name="receiver_name"]') as HTMLInputElement)
+      .value,
+    '',
+  );
+  fireEvent.change(screen.getByLabelText('Chọn ảnh QR từ thiết bị'), {
+    target: {
+      files: [new dom.window.File(['png'], 'other.png', { type: 'image/png' })],
+    },
+  });
+  for (const [name, value] of Object.entries({
+    receiver_name: 'Chủ tài khoản khác',
+    bank_name: 'Ngân hàng khác',
+    account_number: '12345',
+  })) {
+    fireEvent.change(document.querySelector(`[name="${name}"]`)!, {
+      target: { value },
+    });
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Lưu QR & tài khoản' }));
+  await waitFor(() => assert.equal(calls.length, 1));
+  assert.equal(calls[0].args.p_expected_version, 7);
+  assert.equal(
+    (calls[0].args.p_patch as Record<string, unknown>).qr_path,
+    second,
+  );
+});
+test('Inherited QR needs no bank fields, organizer owes zero, exports and reminders agree without creating cash', () => {
+  const owner = { ...a.calculation!.people[0], organizer_paid: true };
+  const activity = {
+    ...a,
+    calculation: {
+      ...a.calculation!,
+      people: [owner, a.calculation!.people[1]],
+    },
+    payment: {
+      ...payment,
+      source: 'member' as const,
+      organizer_id: 'a',
+      bank_name: '',
+      account_number: '',
+    },
+  };
+  const { club, calls } = fixture();
+  render(<PaymentSheet club={club} activity={activity} initialPersonId="a" />);
+  assert.match(
+    screen.getByText(/Đã thanh toán mặc định vì/).textContent ?? '',
+    /không phải xác nhận giao dịch/,
+  );
+  assert.equal(
+    screen
+      .getByRole('img', { name: 'QR chuyển khoản của hoạt động' })
+      .getAttribute('src'),
+    `https://storage.test/${first}`,
+  );
+  assert.equal(screen.queryByText('Ngân hàng'), null);
+  assert.equal(
+    screen.queryByRole('button', { name: 'Sao chép số tài khoản' }),
+    null,
+  );
+  assert.equal(effectivePaid([], owner), 30000);
+  assert.equal(calls.length, 0);
+  assert.equal(activity.ledger.length, 0);
+  assert.match(
+    buildActivityMessage(activity, [], 'https://test.invalid'),
+    /đã thanh toán mặc định \(người phụ trách đặt sân\) · đã đủ/,
+  );
+  assert.match(
+    buildActivityCsv(activity, []),
+    /Đã thanh toán \(mặc định · người phụ trách\)/,
+  );
+  const data = {
+    ...EMPTY,
+    activities: { version: 1, revision: 1, activities: [activity] },
+  };
+  assert.equal(myTaskData(data, 'a', 'a').balances.length, 0);
+  assert.equal(myTaskData(data, 'b', 'a').balances[0].balance, 50000);
 });
 test('Downloading waits for the image response, permits retry on failure and never records payment', async () => {
   const originalFetch = globalThis.fetch;

@@ -184,6 +184,9 @@ function financialLines(a: Row, plan: ChatPlan, q: string): string[] {
         balance = number(p.balance);
       let line = `${text(p.name, 'Thành viên', 45)}: `;
       if (paid !== null) line += `thu ròng đã ghi nhận ${money(paid)}; `;
+      if (p.organizer_paid === true)
+        line +=
+          'đã thanh toán mặc định phần của người phụ trách đặt sân (không phải xác nhận chuyển khoản); ';
       if (ready && due !== null && balance !== null) {
         const label =
           a.fee_status === 'finalized'

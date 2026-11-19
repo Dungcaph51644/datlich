@@ -27,6 +27,7 @@ import { Modal } from './Modal';
 import { BookingIdentityForm, BookingWriteState } from './BookingFeatures';
 import { TripCoverPicker } from './TripCoverPicker';
 import { ActivityPayment, ConfirmPayment, PaymentSheet } from './ActivityPayment';
+import { MemberPaymentQr } from './MemberPaymentQr';
 import { bookingTime, currency, memberName } from './bookingUtils';
 import { dateKey, formatDate, vietnamToday } from './lib';
 import { STATUS_LABELS } from './types';
@@ -41,6 +42,7 @@ import {
   PAYMENT_STATUS,
   TRIP_STATUS,
   netPaid,
+  effectivePaid,
   paymentStatus,
   type ActivityExpense,
   type ActivityKind,
@@ -230,6 +232,7 @@ export function ActivitiesPage({
           </button>
         </div>
       )}
+      {kind === 'badminton' && verified && <MemberPaymentQr key={verified} club={club} />}
       {!club.activities ? (
         <div className="activity-setup">
           <Wallet size={32} />
@@ -514,12 +517,12 @@ export function ActivityDetail({
     expenses = activeExpenses(a);
   const people = calc?.people ?? [];
   const payers = people.filter((p) => p.due > 0);
-  const enough = payers.filter((p) => netPaid(entries, p.id) >= p.due).length;
+  const enough = payers.filter((p) => effectivePaid(entries, p) >= p.due).length;
   const net = entries
     .filter((e) => !e.voided_at && e.kind !== 'reimbursement')
     .reduce((n, e) => n + (e.kind === 'refund' ? -e.amount : e.amount), 0);
   const missing = people.reduce(
-    (n, p) => n + Math.max(0, p.due - netPaid(entries, p.id)),
+    (n, p) => n + Math.max(0, p.due - effectivePaid(entries, p)),
     0,
   );
   const returned = entries
@@ -534,7 +537,9 @@ export function ActivityDetail({
     expenses
       .filter((e) => e.paid_from === 'fund')
       .reduce((n, e) => n + e.actual, 0);
-  const owner = a.organizer_id
+  const owner = a.payment?.source
+    ? a.payment.organizer_id ? memberName(club.members, a.payment.organizer_id) : ''
+    : a.organizer_id
     ? memberName(club.members, a.organizer_id)
     : [
         ...new Set(
@@ -696,6 +701,7 @@ export function ActivityDetail({
             {a.kind === 'trip' &&
               ` · Cần hoàn lại tiền đóng: ${currency((a.participants ?? []).reduce((total, p) => total + Math.max(0, netPaid(entries, p.id) - (people.find((x) => x.id === p.id)?.due ?? 0)), 0))}`}
           </p>
+          {people.some((p) => p.organizer_paid) && <p className="form-help">Người phụ trách đặt sân được tính đã thanh toán mặc định phần của mình. “Đã thu ròng” và số dư quỹ chỉ tính các khoản tiền thực tế đã ghi nhận.</p>}
           <ActivityPayment key={`${a.id}:${club.memberId ?? club.booking?.verified_member_id ?? ''}`} club={club} activity={a} />
           <div
             className="activity-tabs"
@@ -1245,7 +1251,7 @@ function FeePeople({
         </div>
         {people
           .filter((p) => {
-            const paid = netPaid(ledger, p.id);
+            const paid = effectivePaid(ledger, p);
             return (
               filter === 'all' ||
               (filter === 'missing'
@@ -1254,7 +1260,7 @@ function FeePeople({
             );
           })
           .map((p) => {
-            const paid = netPaid(ledger, p.id),
+            const paid = effectivePaid(ledger, p),
               left = p.due - paid,
               status = paymentStatus(p.due, paid);
             return (
@@ -1272,7 +1278,7 @@ function FeePeople({
                   </small>
                 </div>
                 <div data-label="Phải đóng">{currency(p.due)}</div>
-                <div data-label="Đã thu ròng">{currency(paid)}</div>
+                <div data-label="Đã thu ròng">{currency(netPaid(ledger, p.id))}</div>
                 <div
                   data-label={left < 0 ? 'Cần hoàn lại' : 'Còn thiếu'}
                   className={
@@ -1286,6 +1292,7 @@ function FeePeople({
                   <span className={`payment-status ${status}`}>
                     {PAYMENT_STATUS[status]}
                   </span>
+                  {p.organizer_paid && <small className="organizer-payment-note">Mặc định · Người phụ trách đặt sân</small>}
                 </div>
                 <div className="fee-person-actions">
                   <button className="text-btn" aria-label={`Thanh toán cho ${p.name}`} onClick={() => onAction({ type: 'transfer', personId: p.id })}><QrCode size={14} />Thanh toán</button>
@@ -1301,7 +1308,7 @@ function FeePeople({
                           Đã thanh toán
                         </button>
                       )}
-                      <button
+                      {(!p.organizer_paid || netPaid(ledger, p.id) > 0) && <button
                         className="text-btn"
                         disabled={
                           busy(club) ||
@@ -1309,11 +1316,11 @@ function FeePeople({
                             a.fee_status !== 'finalized')
                         }
                         onClick={() =>
-                          onAction({ type: 'payment', personId: p.id, paymentKind: left < 0 ? 'refund' : 'collection' })
+                          onAction({ type: 'payment', personId: p.id, paymentKind: p.organizer_paid || left < 0 ? 'refund' : 'collection' })
                         }
                       >
-                        {left < 0 ? 'Hoàn tiền' : 'Thu / hoàn'}
-                      </button>
+                        {p.organizer_paid || left < 0 ? 'Hoàn tiền' : 'Thu / hoàn'}
+                      </button>}
                     </>
                   )}
                 </div>
@@ -2385,7 +2392,7 @@ function PaymentForm({
                     {m.display_name}
                   </option>
                 ))
-            : options.map((p) => (
+            : options.filter((p) => !!l || kind === 'refund' || !a.calculation?.people.find((x) => x.id === p.id)?.organizer_paid).map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>

@@ -3,8 +3,8 @@ import type { User } from '@supabase/supabase-js';
 import { configured, message, rpc, selectAll, supabase } from './lib';
 import { noteDrafts } from './drafts';
 import { loadClubSnapshots } from './clubTransport';
-import { invokeClubChat } from './chatClient';
 import { attendanceWriteRequest } from './attendanceAccess';
+import { registrationMoment, type RegistrationMoment } from './mascot';
 import { isPaymentQrPath, uploadPaymentQr as uploadQr } from './paymentQr';
 import {
   EMPTY,
@@ -65,6 +65,8 @@ export function useClub() {
   const sequence = useRef(0);
   const authIdentity = useRef<string | null>(null);
   const appSnapshotCapability = useRef<boolean | null>(null);
+  const [registrationEvent, setRegistrationEvent] = useState<RegistrationMoment | null>(null);
+  const registrationSequence = useRef(0);
 
   // Network state is useful even before a backend has been configured.
   useEffect(() => {
@@ -360,7 +362,19 @@ export function useClub() {
     silent = false,
   ) {
     const write = attendanceWriteRequest(args, data, quickReady, bookingTokenRef.current);
-    return run(() => rpc(write.name, write.args), success, silent);
+    const ok = await run(() => rpc(write.name, write.args), success, silent);
+    if (ok) {
+      const event = registrationMoment(
+        data,
+        me?.id ?? null,
+        args.p_member_id,
+        typeof args.p_session_id === 'string' ? [args.p_session_id] : [],
+        args.p_status,
+        ++registrationSequence.current,
+      );
+      if (event) setRegistrationEvent(event);
+    }
+    return ok;
   }
   function bookingRpc<T = unknown>(
     name: string,
@@ -419,6 +433,16 @@ export function useClub() {
     );
     const rows = result as BulkResult[] | null;
     if (ok && rows) {
+      const event = registrationMoment(
+        data,
+        me.id,
+        me.id,
+        rows.filter((row) => row.ok && sessionIds.includes(row.session_id))
+          .map((row) => row.session_id),
+        status,
+        ++registrationSequence.current,
+      );
+      if (event) setRegistrationEvent(event);
       const failures = rows.filter((row) => !row.ok).length;
       if (failures) {
         failedBatch.current = true;
@@ -448,6 +472,7 @@ export function useClub() {
     chooseMember,
     saveAttendance,
     saveMany,
+    registrationEvent,
     bookingReady,
     bookingError,
     activityError,
@@ -463,11 +488,15 @@ export function useClub() {
         storage: supabase.storage,
       });
     },
+    uploadMemberPaymentQr: (file: File) => {
+      if (!supabase) return Promise.reject(new Error('Chưa kết nối Supabase.'));
+      return uploadQr(file, '', {
+        prepare: ({ p_mime, p_size }) => bookingRpc('prepare_member_payment_qr_upload', { p_mime, p_size }),
+        complete: (path) => bookingRpc('complete_member_payment_qr_upload', { p_path: path }),
+        storage: supabase.storage,
+      });
+    },
     verifyBookingIdentity,
     leaveBookingIdentity,
-    askChat: (text: string, history: string[], context: { sessionId?: string; activityId?: string }, signal?: AbortSignal) => {
-      if (!supabase) return Promise.reject(new Error('Chưa cấu hình kết nối Supabase.'));
-      return invokeClubChat(supabase, { message: text, history, memberId: me?.id ?? null, bookingToken: bookingTokenRef.current, ...context }, signal);
-    },
   };
 }

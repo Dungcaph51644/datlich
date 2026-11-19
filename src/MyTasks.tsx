@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, ArrowLeftRight, BadgeCheck, CalendarDays, ClipboardCheck, Mountain, Users, Wallet } from 'lucide-react';
 import { formatDate } from './lib';
 import { currency, weekLabel, memberName } from './bookingUtils';
-import { netPaid, type ClubActivity } from './activityTypes';
+import { effectivePaid, type ClubActivity } from './activityTypes';
 import { navigateRoute } from './navigation';
 import { QuickRegistration } from './QuickRegistration';
 import type { CourtSession, Snapshot } from './types';
@@ -25,7 +25,7 @@ export function myTaskData(club: Snapshot, memberId: string | null, verifiedId: 
           activity,
           person,
           balance:
-            person.due - netPaid(activity.ledger ?? [], person.id),
+            person.due - effectivePaid(activity.ledger ?? [], person),
         }))
         .filter((row) => row.balance !== 0),
     );

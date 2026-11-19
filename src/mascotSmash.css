@@ -1,0 +1,404 @@
+.mascot-smash {
+  --smash-size: clamp(150px, 36vmin, 260px);
+  --smash-start-x: calc(-50vw + max(20px, env(safe-area-inset-left)) + 64px);
+  --smash-start-y: calc(50dvh - max(20px, env(safe-area-inset-bottom)) - 72px);
+  position: fixed;
+  inset: 0;
+  z-index: 84;
+  overflow: hidden;
+  pointer-events: none !important;
+  isolation: isolate;
+  contain: layout paint style;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+.mascot-smash * {
+  pointer-events: none !important;
+}
+.mascot-smash-veil,
+.mascot-smash-speedlines,
+.mascot-smash-glass {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.mascot-smash-veil {
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    #f9edca00 10%,
+    #30473418 60%,
+    #17352c40
+  );
+  animation: smash-veil var(--smash-duration) both;
+}
+.mascot-smash-speedlines {
+  background: repeating-conic-gradient(
+    from 15deg at 50% 46%,
+    transparent 0deg 18deg,
+    #d8c49366 18.2deg 18.6deg,
+    transparent 19deg 27deg
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at 50% 46%,
+    transparent 12%,
+    black 75%
+  );
+  mask-image: radial-gradient(ellipse at 50% 46%, transparent 12%, black 75%);
+  animation: smash-speed var(--smash-duration) both;
+}
+.mascot-smash-actor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--smash-size);
+  aspect-ratio: 200 / 210;
+  filter: drop-shadow(0 18px 16px #173e2e28);
+  animation: smash-flight var(--smash-duration) cubic-bezier(0.2, 0.7, 0.3, 1)
+    both;
+}
+.mascot-smash-actor .shuttle-character {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.mascot-smash-actor .shuttle-body {
+  animation: smash-power var(--smash-duration) both;
+}
+.mascot-smash-actor .arm-right {
+  animation: smash-swing var(--smash-duration) both;
+}
+.mascot-smash-actor .arm-left {
+  animation: smash-fist var(--smash-duration) both;
+}
+.mascot-smash-actor .shuttle-feathers {
+  animation: smash-feather-kick var(--smash-duration) both;
+}
+.mascot-smash-cry,
+.mascot-smash-punchline {
+  position: absolute;
+  left: 50%;
+  width: min(90vw, 440px);
+  text-align: center;
+  transform: translateX(-50%);
+  text-wrap: balance;
+}
+.mascot-smash-cry {
+  bottom: calc(50% + var(--smash-size) * 0.48);
+  color: #21472f;
+  animation: smash-cry var(--smash-duration) both;
+}
+.mascot-smash-cry small {
+  display: inline-block;
+  padding: 7px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #e8bd9c;
+  border-radius: 30px;
+  background: #fff3e5;
+  color: #9b523b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+.mascot-smash-cry strong {
+  display: block;
+  font-size: clamp(21px, 4.3vw, 34px);
+  font-weight: 900;
+  line-height: 1.3;
+  letter-spacing: -1px;
+  text-shadow:
+    0 2px 0 #fffdf5,
+    0 0 20px #fffdf5;
+}
+.mascot-smash-projectile {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 58px;
+  height: 72px;
+  margin: -36px 0 0 -29px;
+  filter: drop-shadow(0 4px 4px #1c442b24);
+  animation: smash-projectile var(--smash-duration) both;
+}
+.mascot-smash-impact {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 100px;
+  height: 100px;
+  margin: -50px 0 0 -50px;
+  border: 2px solid #fffce7;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 6px #e7d99433,
+    inset 0 0 14px #fffce755;
+  animation: smash-impact var(--smash-duration) both;
+}
+.mascot-smash-glass {
+  animation: smash-glass var(--smash-duration) both;
+}
+.smash-cracks-light path {
+  stroke-dasharray: 1;
+  animation: smash-crack-draw var(--smash-duration) both;
+}
+.smash-fragments polygon {
+  fill: #fffef116;
+  stroke: #ffffed66;
+  stroke-width: 0.7;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smash-shards var(--smash-duration) both;
+}
+.mascot-smash-punchline {
+  top: 73%;
+  color: #21472f;
+  animation: smash-punchline var(--smash-duration) both;
+}
+.mascot-smash-punchline strong {
+  display: inline-block;
+  padding: 12px 20px;
+  border: 1px solid #d5dfc4;
+  border-radius: 18px 18px 18px 5px;
+  background: #fffdf2;
+  box-shadow: 0 8px 25px #1c442b15;
+  font-size: clamp(17px, 3.3vw, 24px);
+  font-weight: 800;
+  letter-spacing: -0.6px;
+}
+.mascot-smash-punchline span {
+  display: block;
+  margin-top: 8px;
+  color: #637251;
+  font-size: 11px;
+  text-shadow: 0 0 8px #fffdf5;
+}
+.club-mascot[data-animated='true'] .mood-angry .shuttle-body {
+  animation: mascot-quiver 0.4s ease-in-out 3;
+}
+@keyframes mascot-quiver {
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes smash-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%)
+      translate(var(--smash-start-x), var(--smash-start-y)) scale(0.45)
+      rotate(-18deg);
+  }
+  7% {
+    opacity: 1;
+  }
+  20%,
+  52% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0);
+  }
+  61% {
+    opacity: 1;
+    transform: translate(-50%, -54%) scale(0.95) rotate(-7deg);
+  }
+  82%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%)
+      translate(var(--smash-start-x), var(--smash-start-y)) scale(0.45)
+      rotate(-16deg);
+  }
+}
+@keyframes smash-power {
+  0%,
+  22%,
+  58%,
+  100% {
+    transform: rotate(0);
+  }
+  34% {
+    transform: rotate(-13deg) translateY(3px) scale(1.04, 0.95);
+  }
+  42% {
+    transform: rotate(10deg) translateY(-8px) scale(0.98, 1.04);
+  }
+  49% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes smash-swing {
+  0%,
+  22%,
+  68%,
+  100% {
+    transform: rotate(0);
+  }
+  34% {
+    transform: rotate(-95deg);
+  }
+  42% {
+    transform: rotate(66deg);
+  }
+  49% {
+    transform: rotate(25deg);
+  }
+}
+@keyframes smash-fist {
+  0%,
+  20%,
+  65%,
+  100% {
+    transform: rotate(0);
+  }
+  32%,
+  43% {
+    transform: rotate(35deg);
+  }
+}
+@keyframes smash-feather-kick {
+  0%,
+  23%,
+  58%,
+  100% {
+    transform: rotate(0);
+  }
+  34% {
+    transform: rotate(8deg);
+  }
+  43% {
+    transform: rotate(-9deg);
+  }
+}
+@keyframes smash-veil {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  18%,
+  80% {
+    opacity: 1;
+  }
+}
+@keyframes smash-speed {
+  0%,
+  20%,
+  52%,
+  100% {
+    opacity: 0;
+  }
+  33%,
+  41% {
+    opacity: 0.65;
+  }
+}
+@keyframes smash-cry {
+  0%,
+  12%,
+  47%,
+  100% {
+    opacity: 0;
+  }
+  20%,
+  38% {
+    opacity: 1;
+  }
+}
+@keyframes smash-projectile {
+  0%,
+  30% {
+    opacity: 0;
+    transform: translate(70px, 25px) scale(0.2) rotate(-40deg);
+  }
+  34% {
+    opacity: 1;
+    transform: translate(70px, 25px) scale(0.25) rotate(-30deg);
+  }
+  42% {
+    opacity: 1;
+    transform: translate(0, 0) scale(3.2) rotate(-14deg);
+  }
+  45%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 0) scale(5) rotate(-8deg);
+  }
+}
+@keyframes smash-impact {
+  0%,
+  41% {
+    opacity: 0;
+    transform: scale(0.1);
+  }
+  43% {
+    opacity: 0.85;
+    transform: scale(0.7);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(4);
+  }
+}
+@keyframes smash-glass {
+  0%,
+  41% {
+    opacity: 0;
+  }
+  43%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes smash-crack-draw {
+  0%,
+  41% {
+    stroke-dashoffset: 1;
+  }
+  51%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes smash-shards {
+  0%,
+  45% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0);
+  }
+  49%,
+  64% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--shard-x), var(--shard-y)) rotate(var(--shard-r));
+  }
+}
+@keyframes smash-punchline {
+  0%,
+  53%,
+  100% {
+    opacity: 0;
+  }
+  60%,
+  84% {
+    opacity: 1;
+  }
+}
+@media (max-width: 600px) {
+  .mascot-smash {
+    --smash-start-x: calc(-50vw + max(12px, env(safe-area-inset-left)) + 49px);
+    --smash-start-y: calc(
+      50dvh - max(12px, env(safe-area-inset-bottom)) - 57px
+    );
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-smash {
+    display: none;
+  }
+}

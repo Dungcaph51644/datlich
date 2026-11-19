@@ -16,6 +16,7 @@ import { copyText } from './userActions';
 import { activityFinancialPeople } from './financeExport';
 import {
   netPaid,
+  effectivePaid,
   type ActivityPaymentSettings,
   type ClubActivity,
   type FeePerson,
@@ -73,14 +74,24 @@ export function ActivityPayment({
       className="activity-payment"
       aria-label="Chuyển khoản của hoạt động"
     >
-      <span className="payment-qr-icon">
-        <QrCode size={24} />
-      </span>
+      {imageUrl(club, p?.qr_path) ? (
+        <button
+          className="payment-card-thumbnail"
+          aria-label="Mở QR thanh toán"
+          onClick={() => setPaying(true)}
+        >
+          <img src={imageUrl(club, p?.qr_path)} alt="QR nhận tiền của buổi" />
+        </button>
+      ) : (
+        <span className="payment-qr-icon">
+          <QrCode size={24} />
+        </span>
+      )}
       <div className="payment-card-copy">
         <h3>Thanh toán chuyển khoản</h3>
         <p>
           {p?.receiver_name
-            ? `${p.receiver_name} · ${p.bank_name}`
+            ? [p.receiver_name, p.bank_name].filter(Boolean).join(' · ')
             : 'Người phụ trách bổ sung QR và tài khoản nhận tiền tại đây.'}
         </p>
         {person && (
@@ -92,11 +103,18 @@ export function ActivityPayment({
                 ? currency(
                     Math.max(
                       0,
-                      person.due - netPaid(a.ledger ?? [], person.id),
+                      person.due - effectivePaid(a.ledger ?? [], person),
                     ),
                   )
                 : 'Chưa xác định'}
             </strong>
+          </small>
+        )}
+        {p?.source === 'member' && (
+          <small>
+            {p.organizer_id
+              ? 'Tự dùng QR cá nhân của người phụ trách đặt sân.'
+              : 'Chưa có người phụ trách chung. Cần chỉ định người nhận tiền cho bảng phí này.'}
           </small>
         )}
       </div>
@@ -111,7 +129,29 @@ export function ActivityPayment({
             onClick={() => setEditing(true)}
             disabled={locked(club)}
           >
-            {p?.version ? 'Sửa QR & tài khoản' : 'Thêm QR & tài khoản'}
+            {p?.source === 'member'
+              ? 'Dùng QR riêng cho buổi'
+              : p?.version
+                ? 'Sửa QR & tài khoản'
+                : 'Thêm QR & tài khoản'}
+          </button>
+        )}
+        {a.can_manage && p?.source === 'activity' && (
+          <button
+            className="text-btn"
+            disabled={locked(club)}
+            onClick={() =>
+              void club.run(
+                () =>
+                  club.bookingRpc('use_organizer_payment_qr', {
+                    p_activity: a.id,
+                    p_expected_version: p.version,
+                  }),
+                'Đã chuyển sang QR cá nhân của người phụ trách.',
+              )
+            }
+          >
+            Dùng QR người phụ trách
           </button>
         )}
       </div>
@@ -150,7 +190,10 @@ export function PaymentSettingsForm({
   activity: ClubActivity;
   close: () => void;
 }) {
-  const initial = a.payment ?? empty;
+  const initial =
+    a.payment?.source === 'member'
+      ? { ...empty, version: a.payment.version }
+      : (a.payment ?? empty);
   const [base, setBase] = useState(() => ({ ...initial }));
   const [draft, setDraft] = useState(() => ({ ...initial }));
   const [file, setFile] = useState<File | null>(null);
@@ -598,7 +641,7 @@ export function PaymentSheet({
   const people = activityFinancialPeople(a, club.members);
   const p = a.payment ?? empty;
   const person = people.find((x) => x.id === personId);
-  const paid = person ? netPaid(a.ledger ?? [], person.id) : 0;
+  const paid = person ? effectivePaid(a.ledger ?? [], person) : 0;
   const balance = person ? person.due - paid : null;
   const calculable = hasPaymentCalculation(a);
   const amount = balance != null && calculable ? Math.max(0, balance) : null;
@@ -680,8 +723,15 @@ export function PaymentSheet({
           <p className="form-help">
             {currency(person.due)}{' '}
             {a.fee_status === 'draft' ? 'tạm phân bổ' : 'phải đóng'} · Đã thu
-            ròng theo ghi nhận: {currency(paid)}.
+            ròng theo ghi nhận: {currency(netPaid(a.ledger ?? [], person.id))}.
           </p>
+          {person.organizer_paid && (
+            <p className="payment-notice">
+              Đã thanh toán mặc định vì bạn là người phụ trách đặt sân. Phần
+              đóng của bạn được tính là đã đủ; đây không phải xác nhận giao dịch
+              ngân hàng.
+            </p>
+          )}
           {!calculable && (
             <p className="alert">
               Chưa đủ chi phí hoặc phân bổ để xác định số tiền cần chuyển. Hãy
@@ -766,21 +816,25 @@ export function PaymentSheet({
           <dt>Người nhận</dt>
           <dd>{p.receiver_name || 'Chưa bổ sung'}</dd>
         </div>
-        <div>
-          <dt>Ngân hàng</dt>
-          <dd>{p.bank_name || 'Chưa bổ sung'}</dd>
-        </div>
-        <div>
-          <dt>Số tài khoản</dt>
-          <dd>
-            <strong>{p.account_number || 'Chưa bổ sung'}</strong>
-            <CopyValue
-              label="số tài khoản"
-              value={p.account_number}
-              onNotice={setNotice}
-            />
-          </dd>
-        </div>
+        {(p.bank_name || p.source !== 'member') && (
+          <div>
+            <dt>Ngân hàng</dt>
+            <dd>{p.bank_name || 'Chưa bổ sung'}</dd>
+          </div>
+        )}
+        {(p.account_number || p.source !== 'member') && (
+          <div>
+            <dt>Số tài khoản</dt>
+            <dd>
+              <strong>{p.account_number || 'Chưa bổ sung'}</strong>
+              <CopyValue
+                label="số tài khoản"
+                value={p.account_number}
+                onNotice={setNotice}
+              />
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Nội dung chuyển khoản</dt>
           <dd>
@@ -794,8 +848,9 @@ export function PaymentSheet({
         </div>
       </dl>
       <p className="form-help">
-        Người phụ trách thu tiền xác nhận “Đã thanh toán” thủ công sau khi kiểm
-        tra giao dịch. Xem hoặc tải QR không thay đổi trạng thái.
+        Người phụ trách đặt sân được ghi đã thanh toán mặc định. Các thành viên
+        khác được xác nhận thủ công sau khi kiểm tra giao dịch. Xem hoặc tải QR
+        không thay đổi trạng thái.
       </p>
       {notice && (
         <p className="payment-notice" role="status">
@@ -862,7 +917,7 @@ export function ConfirmPayment({
   const [checked, setChecked] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const left = person.due - netPaid(a.ledger ?? [], person.id);
+  const left = person.due - effectivePaid(a.ledger ?? [], person);
   useEffect(() => {
     setChecked(false);
   }, [left, person.id]);

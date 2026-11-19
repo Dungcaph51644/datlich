@@ -92,6 +92,32 @@ const request = (body: unknown) =>
     body: JSON.stringify(body),
   });
 
+test('Organizer settlement is explained as a convention while actual receipts stay zero', () => {
+  const reply = lookup('Tôi còn thiếu bao nhiêu?', {
+    scope: 'finance',
+    activities: [
+      {
+        ...activity,
+        people: [
+          {
+            name: 'Yến',
+            due: 180000,
+            net_paid: 0,
+            balance: 0,
+            organizer_paid: true,
+          },
+        ],
+      },
+    ],
+  });
+  assert.match(
+    reply.answer,
+    /đã thanh toán mặc định phần của người phụ trách đặt sân/,
+  );
+  assert.match(reply.answer, /không phải xác nhận chuyển khoản/);
+  assert.match(reply.answer, /còn thiếu 0/);
+});
+
 test('Free mode defaults to lookup, needs no API key, reads fresh facts and never calls a model even with an old key', async () => {
   for (const configured of [false, true]) {
     const calls: string[] = [];

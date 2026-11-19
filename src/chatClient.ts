@@ -1,3 +1,5 @@
+// Legacy contract used by the retained backend regression tests. The website
+// no longer imports this module or invokes the retired chatbot endpoint.
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   ChatReply,

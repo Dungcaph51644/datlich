@@ -1,4 +1,14 @@
-# Trợ lý nhóm cầu lông
+# Trợ lý nhóm cầu lông — tài liệu lưu trữ
+
+**Đã ngừng sử dụng ngày 19/11/2026.** Giao diện, CSS và đường gọi chatbot đã được gỡ khỏi ứng dụng. Cầu Cầu thay vị trí nút chat ở góc dưới bên trái. Frontend mới không gửi yêu cầu đến `club-chat` và không cần cấu hình AI. Phần bên dưới chỉ ghi lại triển khai cũ, không phải hướng dẫn bật tính năng hiện tại.
+
+## Dọn dịch vụ Supabase đã triển khai
+
+Việc cập nhật source/frontend không tự xóa Edge Function đã triển khai. Sau khi đưa frontend mới lên Netlify, có thể xóa riêng function `club-chat` trong Supabase Dashboard → Edge Functions để ngừng phục vụ cả các tab cũ. Nếu các secret sau chỉ phục vụ chatbot này, có thể xóa: `OPENAI_API_KEY`, `AI_PROVIDER`, `AI_MODEL`, `AI_BASE_URL`, `AI_MAX_OUTPUT_TOKENS`, `CHAT_ALLOWED_ORIGINS`. Giữ các secret Supabase hệ thống và các function khác. Chưa thực hiện thay đổi từ xa trong bản cập nhật này.
+
+Giữ nguyên migration lịch sử, bảng và RPC cũ; việc gỡ chatbot không yêu cầu chạy SQL và không ảnh hưởng dữ liệu lịch đánh, đăng ký hoặc QR thanh toán. Mã backend cùng kiểm thử cũ được giữ phục vụ đối chiếu lịch sử; không cần triển khai lại `club-chat`.
+
+## Tài liệu phiên bản trước
 
 Chatbot nằm ở góc dưới bên trái, dùng xanh rừng/lime cùng giao diện hiện tại. Có gợi ý câu hỏi, nhập tiếng Việt, trạng thái chờ, nguồn chi tiết, thu nhỏ, đóng, xác nhận xóa, thử lại, giới hạn ký tự và trạng thái mất mạng. Tin nhắn chỉ giữ trong bộ nhớ tab, tối đa 40 tin; tải lại hoặc đổi tên/danh tính sẽ xóa nội dung. Không lưu lịch sử chat vào localStorage hoặc database.
 

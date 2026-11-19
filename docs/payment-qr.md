@@ -1,5 +1,7 @@
 # QR chuyển khoản theo từng buổi và chuyến đi
 
+> **Cập nhật:** QR cá nhân dùng tự động theo người phụ trách đã được bổ sung trong [hướng dẫn mới](./member-payment-qr.md). Sau khi chạy migration `202611190005_member_payment_qr.sql`, không cần tải ảnh và nhập lại tài khoản cho từng buổi. Phần bên dưới mô tả QR riêng của từng hoạt động (vẫn được giữ làm tùy chọn). Người phụ trách cầu lông được tính đã thanh toán mặc định phần của mình; các thành viên khác vẫn xác nhận giao dịch thủ công.
+
 ## Bật trên Supabase
 
 1. Sau các migration tài chính 003, tự tạo phí/ảnh bìa 004 và practical updates đang dùng, mở [migration QR thanh toán](../supabase/migrations/202611190003_activity_payment_qr.sql). Dán **toàn bộ** vào Supabase → SQL Editor và Run. Migration có thể chạy lại, không sửa số tiền, khoản thu hoặc bản chốt cũ.
@@ -10,7 +12,7 @@
 
 ## Sử dụng
 
-- **Mỗi hoạt động có thông tin riêng.** Các nhóm ca/sân được gộp trong một bảng phí dùng QR của bảng phí đó. Buổi mới hoặc bản sao tuần mới không tự mang theo QR/tài khoản của tuần trước. Chọn **Dùng QR đã tải** để dùng lại ảnh và thông tin nhận tiền; kiểm tra lại trước khi lưu. Thư viện chung dành cho người đang có quyền quản lý hoạt động, tối đa 60 ảnh gần nhất.
+- **QR riêng là một ngoại lệ của hoạt động.** Các nhóm ca/sân được gộp trong một bảng phí dùng chung cấu hình nhận tiền. Sau khi cài QR cá nhân, buổi mới tự lấy QR theo người phụ trách; cấu hình riêng cũ tiếp tục được giữ. Trong biểu mẫu QR riêng, chọn **Dùng QR đã tải** để dùng lại ảnh và thông tin nhận tiền; kiểm tra lại trước khi lưu. Thư viện chung dành cho người đang có quyền quản lý hoạt động, tối đa 60 ảnh gần nhất.
 - **Thay hoặc bỏ QR:** mở **Sửa QR & tài khoản**, chọn ảnh mới hoặc **Xóa QR khỏi buổi**, rồi Lưu. Bỏ QR giữ thông tin tài khoản và giữ ảnh trong thư viện để dùng lại. Không xóa tệp dùng chung khiến buổi/chuyến khác mất QR.
 - **Thành viên thanh toán:** bấm **Thanh toán**. Tên đang chọn trên website được dùng để mở đúng dòng tiền; nếu không tìm thấy thì chọn tên trong cửa sổ. Khách đi cùng có dòng riêng. Số còn phải đóng bằng nghĩa vụ máy chủ trừ tiền đã thu ròng; tiền tạm tính được ghi rõ và có thể đổi. Thiếu chi phí/phân bổ thì hiển thị “Chưa xác định”, không suy đoán số tiền.
 - **Sao chép và xem ảnh:** sao chép tài khoản giữ số 0 ở đầu; số tiền sao chép là đồng nguyên, không có dấu phân cách/đơn vị. Nội dung chuyển khoản mặc định gồm tên buổi và người đóng, hoặc dùng nội dung người phụ trách đã nhập. Phóng to 100–300%, cuộn ảnh lớn và tải ảnh gốc. Nếu ngân hàng cần nội dung riêng cho từng người, để trống nội dung chung để hệ thống thêm tên.
@@ -20,6 +22,12 @@
 
 ## Lưu trữ, quyền và đồng bộ
 
+### Người phụ trách đặt sân và chủ tài khoản nhận tiền
+
+Quyền QR của cầu lông theo người phụ trách **bảng phí**; nếu bảng phí chưa chỉ định riêng thì phải là người phụ trách của tất cả ca/sân được gộp. Với buổi kế thừa phân công tuần, đó là `sessions.organizer_id` từ lịch phân công CS. Người thực tế đã đặt sân (`booked_by_member_id`) có thể khác và không tự được cấp quyền sửa QR chỉ nhờ tên ghi ở trường này. Danh tính dùng để lưu do máy chủ xác minh từ mã cá nhân hoặc tài khoản đã liên kết, độc lập với tên đang chọn trên website. Ảnh tải lên lưu ID người tải đã xác minh.
+
+Cấu hình **QR riêng của từng bảng phí/chuyến** vẫn hỗ trợ nhập tài khoản và thư viện dùng lại. Sau migration QR cá nhân, người phụ trách có thể chỉ tải một ảnh vào hồ sơ của mình; các bảng chưa có ngoại lệ tự dùng ảnh đó, không nhập lại tài khoản. Bấm **Dùng QR người phụ trách** để chuyển cấu hình riêng về tự động. Website không giải mã QR để chứng minh chủ tài khoản ngân hàng trùng danh tính người phụ trách; người chuyển vẫn phải đối chiếu trong ứng dụng ngân hàng.
+
 Tận dụng client Supabase, RPC xác minh bằng Auth/mã cá nhân, `private.finance_access`, snapshot gộp và kênh `booking_sync` hiện có. Tài khoản/QR nằm trong `activity_payment_settings`, không lưu ảnh vào localStorage hoặc JSON. Chỉ danh tính đã xác minh được nhận thông tin này qua snapshot, theo quyền xem tài chính hiện tại; khách công khai không được đọc tài khoản hoặc sổ thu.
 
 Bucket `payment-qrs` dùng liên kết ảnh công khai có đường dẫn ngẫu nhiên, giống cách phục vụ ảnh bìa: ai có chính xác liên kết ảnh đều có thể mở ảnh. Không có quyền liệt kê thư viện công khai. Upload cần quyền quản lý đang còn hiệu lực, đúng đường dẫn được cấp trong 15 phút; chỉ INSERT, không ghi đè hoặc xóa ảnh từ frontend. File được giới hạn JPG/PNG/WebP và 5 MB; client kiểm tra header, máy chủ kiểm tra metadata Storage trước khi dùng. Không chứa token cá nhân trong đường dẫn. Mỗi lần thay ảnh tạo đường dẫn mới nên thiết bị khác không nhận ảnh cũ từ cache.
@@ -28,6 +36,7 @@ Lưu tài khoản/QR có lịch sử và tăng revision; thiết bị khác nh�
 
 ## Kiểm chứng
 
+- Kiểm tra quyền ngày 19/11/2026: API QR đã có trên Supabase thật; yêu cầu tải/lưu/thư viện dùng mã giả và ID hoạt động không tồn tại đều bị chặn `42501`, snapshot khách không trả thông tin nhận tiền. Không tải ảnh hoặc sửa dữ liệu thật. Các kiểm thử QR hiện có đạt; bổ sung PostgreSQL xác nhận người được phân công tuần đã xác minh lưu được, ảnh ghi đúng ID người tải, người thực tế đặt sân khác không tự có quyền QR và buổi tiếp theo của cùng người phụ trách vẫn có QR trống. Chưa đối chiếu QR cụ thể đã lưu trên website bằng phiên đã xác minh.
 - Kiểm thử PostgreSQL/PGlite: quyền admin/người phụ trách/thành viên/khách; đường dẫn upload một lần; MIME/dung lượng; file chưa tải hoặc metadata sai; sử dụng QR riêng, thay/dùng lại/bỏ ảnh; đọc bằng hai danh tính và snapshot mới; phiên bản cũ HTTP 409; đổi phụ trách; ảnh/quyền hết hạn; bản chốt và khoản thu không đổi; xác nhận thu chống trùng; migration chạy lại.
 - Kiểm thử React và giao thức upload: xem trước trước khi lưu; chờ Storage xác nhận; lỗi và thử lại; dùng ảnh đã tải thành công sau lỗi lưu; giữ bản nhập khi xung đột; sao chép; chọn đúng tên; thiếu QR/chi phí và tiền dư; thay snapshot ở phiên đọc và tải lại. Sổ tiền chỉ đổi khi người có quyền xác nhận thủ công.
 - Lượt chạy toàn bộ ngày 19/11/2026 đạt **241/241 kiểm thử**. Kiểm tra bố cục cửa sổ thanh toán trên trình duyệt ở 320/375/390/768/1440px: không tràn ngang, cỡ chữ trường nhập/chọn trên điện thoại 16px. Dữ liệu trình duyệt là dữ liệu kiểm thử riêng, các request tài chính/Storage được thay thế tại trang thử; không phải giao dịch hoặc upload lên Supabase thật.

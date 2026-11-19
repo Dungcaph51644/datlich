@@ -7,7 +7,7 @@ import { PGlite } from '@electric-sql/pglite';
 test('Payment QR: storage capabilities, scoped manager writes, independent snapshots and unchanged receipts', async (t) => {
   const db = new PGlite();
   const admin = '10000000-0000-4000-8000-000000000001';
-  await db.exec(`create role anon;create role authenticated;create schema auth;
+  await db.exec(`create role anon;create role authenticated;create role service_role;create schema auth;
     create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);
     create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;
     grant usage on schema auth to anon,authenticated;grant execute on function auth.uid() to anon,authenticated;
@@ -513,6 +513,553 @@ test('Payment QR: storage capabilities, scoped manager writes, independent snaps
       assert.deepEqual(after.payment, before.payment);
       assert.deepEqual(after.ledger, before.ledger);
       assert.equal(typeof after.can_manage, 'boolean');
+    },
+  );
+  await t.test(
+    'Weekly assigned booker saves under their verified identity; actual booking and later sessions do not select a recipient automatically',
+    async () => {
+      await asAdmin();
+      await call('save_booking_assignment', [
+        '2030-05-20',
+        ids.Yến,
+        null,
+        'Kiểm tra QR theo người phụ trách tuần',
+        false,
+      ]);
+      const patch = {
+        session_date: '2030-05-22',
+        start_time: '19:00',
+        end_time: '21:00',
+        venue: 'Sân phân công tuần',
+        court: '2',
+        organizer_mode: 'weekly',
+        booking_status: 'booked',
+        booked_by_member_id: ids.Hiền,
+      };
+      const weeklySession = await call('save_session', [null, patch, null]);
+      const assigned = (await snap(null)).club.sessions.find(
+        (s: any) => s.id === weeklySession,
+      );
+      assert.equal(assigned.organizer_id, ids.Yến);
+      assert.equal(assigned.booked_by_member_id, ids.Hiền);
+      const weekly = (await snap(null)).activities.find((a: any) =>
+        a.groups.some((g: any) => g.session_id === weeklySession),
+      ).id;
+      await asGuest();
+      assert.equal((await activity(weekly, yen)).can_manage, true);
+      assert.equal((await activity(weekly, hien)).can_manage, false);
+      await assert.rejects(
+        call('prepare_payment_qr_upload', [weekly, 'image/png', 100, hien]),
+        /phụ trách/,
+      );
+      const path = await upload(weekly);
+      await call('save_activity_payment_settings', [
+        weekly,
+        { ...account, qr_path: path },
+        0,
+        yen,
+      ]);
+      const saved = await activity(weekly, hien);
+      assert.equal(saved.payment.qr_path, path);
+      assert.equal(saved.payment.receiver_name, account.receiver_name);
+      await db.exec('reset role');
+      const owner = (
+        await db.query<{ actor_member_id: string }>(
+          'select actor_member_id from private.payment_qr_uploads where path=$1',
+          [path],
+        )
+      ).rows[0];
+      assert.equal(owner.actor_member_id, ids.Yến);
+
+      await asAdmin();
+      const nextSession = await call('save_session', [
+        null,
+        { ...patch, session_date: '2030-05-23' },
+        null,
+      ]);
+      const next = (await snap(null)).activities.find((a: any) =>
+        a.groups.some((g: any) => g.session_id === nextSession),
+      ).id;
+      await asGuest();
+      const nextPayment = (await activity(next, yen)).payment;
+      assert.equal(nextPayment.qr_path, null);
+      assert.equal(nextPayment.receiver_name, '');
+    },
+  );
+  await t.test(
+    'Personal QR defaults and organizer settlement conventions',
+    async (t) => {
+      await db.exec('reset role');
+      for (const name of [
+        '202611190002_club_chat.sql',
+        '202611190005_member_payment_qr.sql',
+        '202611190005_member_payment_qr.sql',
+      ]) {
+        await db.exec(
+          await readFile(
+            new URL(`../supabase/migrations/${name}`, import.meta.url),
+            'utf8',
+          ),
+        );
+      }
+      async function personalUpload(token = yen) {
+        const p = await call('prepare_member_payment_qr_upload', [
+          'image/png',
+          100,
+          token,
+        ]);
+        await insert(p);
+        await call('complete_member_payment_qr_upload', [p.path, token]);
+        return p.path as string;
+      }
+      async function newSession(day: string, organizer = ids.Yến, court = '1') {
+        await asAdmin();
+        const sid = await call('save_session', [
+          null,
+          {
+            session_date: day,
+            start_time: '18:00',
+            end_time: '20:00',
+            venue: 'Sân QR cá nhân',
+            court,
+            organizer_mode: 'override',
+            organizer_id: organizer,
+            booking_status: 'booked',
+            booked_by_member_id: ids.Hiền,
+          },
+          null,
+        ]);
+        await call('set_attendance', [sid, ids.Yến, 'going', null, null]);
+        await call('set_attendance', [sid, ids.Hiền, 'going', null, null]);
+        const a = (await snap(null)).activities.find((a: any) =>
+          a.groups.some((g: any) => g.session_id === sid),
+        );
+        await asGuest();
+        return { sid, id: a.id as string };
+      }
+      const first = await newSession('2030-06-04');
+      let qr = '';
+      await t.test(
+        'Verified identity owns one QR, with no account entry and no selected-name authority',
+        async () => {
+          assert.equal(
+            (await snap(yen)).personal_payment_qr.member_id,
+            ids.Yến,
+          );
+          assert.equal((await snap(null)).personal_payment_qr, null);
+          for (const token of [null, ids.Yến])
+            await assert.rejects(
+              call('prepare_member_payment_qr_upload', [
+                'image/png',
+                100,
+                token,
+              ]),
+              /xác minh/,
+            );
+          qr = await personalUpload();
+          await assert.rejects(
+            call('save_member_payment_qr', [qr, 0, hien]),
+            /chính bạn/,
+          );
+          await call('save_member_payment_qr', [qr, 0, yen]);
+          const a = await activity(first.id, hien);
+          assert.equal(a.payment.qr_path, qr);
+          assert.equal(a.payment.source, 'member');
+          assert.equal(a.payment.organizer_id, ids.Yến);
+          assert.equal(a.payment.receiver_name, 'Yến');
+          assert.equal(a.payment.account_number, '');
+          assert.equal(a.version, 1); // Reading/inheriting QR must not disable regrouping.
+          assert.equal((await activity(first.id, yen)).can_regroup, true);
+          assert.equal((await snap(hien)).personal_payment_qr.qr_path, null);
+          await assert.rejects(
+            db.query('select * from private.member_payment_qrs'),
+            /permission denied/,
+          );
+          assert.equal(
+            (await snap(null)).activities.find((a: any) => a.id === first.id)
+              .payment,
+            undefined,
+          );
+        },
+      );
+      await t.test(
+        'Upload ownership, metadata, expiry and single insertion are enforced',
+        async () => {
+          const p = await call('prepare_member_payment_qr_upload', [
+            'image/png',
+            100,
+            yen,
+          ]);
+          await assert.rejects(
+            call('complete_member_payment_qr_upload', [p.path, hien]),
+            /không được/,
+          );
+          await assert.rejects(
+            call('save_member_payment_qr', [p.path, 1, yen]),
+            /xác nhận/,
+          );
+          await insert(p, { mimetype: 'image/png', size: 99 });
+          await assert.rejects(
+            call('complete_member_payment_qr_upload', [p.path, yen]),
+            /xác nhận/,
+          );
+          await assert.rejects(insert(p), /row-level security|duplicate/);
+          const expired = await call('prepare_member_payment_qr_upload', [
+            'image/png',
+            100,
+            yen,
+          ]);
+          await db.exec('reset role');
+          await db.query(
+            "update private.member_qr_uploads set expires_at=now()-interval '1 minute' where path=$1",
+            [expired.path],
+          );
+          await asGuest();
+          await assert.rejects(insert(expired), /row-level security/);
+        },
+      );
+      await t.test(
+        'New sessions inherit QR; replacing, removing and reloading synchronize across identities',
+        async () => {
+          const second = await newSession('2030-06-05');
+          assert.equal((await activity(second.id, hien)).payment.qr_path, qr);
+          const beforeRevision = (await snap(yen)).revision;
+          const replacement = await personalUpload();
+          await call('save_member_payment_qr', [replacement, 1, yen]);
+          await assert.rejects(
+            call('save_member_payment_qr', [qr, 1, yen]),
+            /thiết bị khác/,
+          );
+          assert.ok((await snap(hien)).revision > beforeRevision);
+          assert.equal(
+            (await activity(first.id, hien)).payment.qr_path,
+            replacement,
+          );
+          assert.equal(
+            (await activity(second.id, hien)).payment.qr_path,
+            replacement,
+          );
+          await call('save_member_payment_qr', [null, 2, yen]);
+          assert.equal((await activity(first.id, hien)).payment.qr_path, null);
+          await call('save_member_payment_qr', [qr, 3, yen]);
+          assert.equal((await activity(second.id, hien)).payment.qr_path, qr);
+        },
+      );
+      await t.test(
+        'A legacy per-activity QR stays explicit until reset to the organizer QR',
+        async () => {
+          const old = await activity(badminton, hien);
+          assert.equal(old.payment.source, 'activity');
+          await assert.rejects(
+            call('use_organizer_payment_qr', [
+              badminton,
+              old.payment.version,
+              hien,
+            ]),
+            /phụ trách/,
+          );
+          await assert.rejects(
+            call('use_organizer_payment_qr', [badminton, 999, yen]),
+            /thay đổi/,
+          );
+          await call('use_organizer_payment_qr', [
+            badminton,
+            old.payment.version,
+            yen,
+          ]);
+          const inherited = await activity(badminton, hien);
+          assert.equal(inherited.payment.source, 'member');
+          assert.equal(inherited.payment.qr_path, qr);
+          assert.deepEqual(inherited.ledger, old.ledger);
+          assert.equal(inherited.payment.version, old.payment.version + 1);
+          await call('save_activity_payment_settings', [
+            badminton,
+            { ...account, qr_path: firstPath },
+            inherited.payment.version,
+            yen,
+          ]);
+          const overridden = await activity(badminton, hien);
+          assert.equal(overridden.payment.source, 'activity');
+          assert.equal(overridden.payment.qr_path, firstPath);
+          await assert.rejects(
+            call('save_activity_payment_settings', [
+              badminton,
+              { bank_name: 'Ghi đè từ biểu mẫu cũ' },
+              old.payment.version,
+              yen,
+            ]),
+            /thiết bị khác/,
+          );
+          await call('use_organizer_payment_qr', [
+            badminton,
+            overridden.payment.version,
+            yen,
+          ]);
+          assert.equal(
+            (await activity(badminton, hien)).payment.source,
+            'member',
+          );
+        },
+      );
+      await t.test(
+        'Organizer is paid by convention, with no invented cash receipt or refundable credit',
+        async () => {
+          let a = await activity(first.id, yen);
+          await call('save_activity_expense', [
+            first.id,
+            null,
+            {
+              name: 'Tiền sân',
+              category: 'court',
+              scope: 'group',
+              group_id: a.groups[0].id,
+              actual: 80000,
+              estimated: 80000,
+            },
+            null,
+            '',
+            yen,
+          ]);
+          a = await activity(first.id, hien);
+          assert.equal(a.fee_status, 'draft');
+          assert.equal(
+            a.calculation.people.find((p: any) => p.member_id === ids.Yến)
+              .organizer_paid,
+            true,
+          );
+          assert.equal(
+            a.calculation.people.find((p: any) => p.member_id === ids.Hiền)
+              .organizer_paid,
+            false,
+          );
+          await call('set_activity_fee_state', [
+            first.id,
+            'finalize',
+            (await snap(yen)).revision,
+            '',
+            yen,
+          ]);
+          a = await activity(first.id, hien);
+          assert.equal(
+            a.calculation.people.find((p: any) => p.member_id === ids.Yến).due,
+            40000,
+          );
+          assert.equal(a.ledger.length, 0);
+          assert.equal(
+            await call('record_activity_payment', [
+              first.id,
+              ids.Yến,
+              'settle',
+              null,
+              randomUUID(),
+              '',
+              yen,
+            ]),
+            null,
+          );
+          await assert.rejects(
+            call('record_activity_payment', [
+              first.id,
+              ids.Yến,
+              'collection',
+              40000,
+              randomUUID(),
+              '',
+              yen,
+            ]),
+            /không thu trùng/,
+          );
+          await assert.rejects(
+            call('record_activity_payment', [
+              first.id,
+              ids.Yến,
+              'refund',
+              40000,
+              randomUUID(),
+              '',
+              yen,
+            ]),
+            /Số hoàn vượt/,
+          );
+          await call('record_activity_payment', [
+            first.id,
+            ids.Hiền,
+            'settle',
+            null,
+            randomUUID(),
+            'Thực nhận',
+            yen,
+          ]);
+          a = await activity(first.id, hien);
+          assert.equal(a.ledger.length, 1);
+          assert.equal(a.ledger[0].amount, 40000);
+          assert.equal(a.ledger[0].person_id, ids.Hiền);
+          const context = await call('get_chat_context', [
+            'finance',
+            '2030-06-01',
+            '2030-06-10',
+            ids.Yến,
+            null,
+            first.id,
+            true,
+            false,
+            yen,
+          ]);
+          const people = context.activities[0].people;
+          assert.equal(people[0].organizer_paid, true);
+          assert.equal(people[0].net_paid, 0); // Actual receipts stay actual.
+          assert.equal(people[0].balance, 0);
+        },
+      );
+      await t.test(
+        'Finalized recipient stays frozen; reopening uses new assignments and recalculates the convention',
+        async () => {
+          const before = await activity(first.id, hien);
+          await asAdmin();
+          const session = (await snap(null)).club.sessions.find(
+            (s: any) => s.id === first.sid,
+          );
+          await call('save_session', [
+            first.sid,
+            { organizer_mode: 'override', organizer_id: ids.Hiền },
+            session.version,
+          ]);
+          await asGuest();
+          const frozen = await activity(first.id, hien);
+          assert.equal(frozen.payment.organizer_id, ids.Yến);
+          assert.deepEqual(frozen.calculation, before.calculation);
+          // Management follows the existing assignment rules; only admin may reopen here.
+          await asAdmin();
+          await call('set_activity_fee_state', [
+            first.id,
+            'reopen',
+            (await snap(null)).revision,
+            'Đổi người phụ trách',
+            null,
+          ]);
+          await asGuest();
+          const reopened = await activity(first.id, hien);
+          assert.equal(reopened.payment.organizer_id, ids.Hiền);
+          assert.equal(reopened.payment.qr_path, null);
+          assert.equal(
+            reopened.calculation.people.find(
+              (p: any) => p.member_id === ids.Hiền,
+            ).organizer_paid,
+            true,
+          );
+          assert.equal(
+            reopened.calculation.people.find(
+              (p: any) => p.member_id === ids.Yến,
+            ).organizer_paid,
+            false,
+          );
+          assert.deepEqual(reopened.ledger, before.ledger);
+        },
+      );
+      await t.test(
+        'Trip recipients may reuse personal QR but do not get automatic badminton settlement',
+        async () => {
+          await asAdmin();
+          const tripId = await call('create_club_activity', [
+            'trip',
+            'Chuyến dùng QR cá nhân',
+            [],
+            { organizer_id: ids.Yến },
+            null,
+          ]);
+          await call('save_trip_participant', [
+            tripId,
+            null,
+            {
+              member_id: ids.Yến,
+              status: 'going',
+              share_units: 1000,
+              billable: true,
+            },
+            null,
+            null,
+          ]);
+          await asGuest();
+          const after = await activity(tripId, hien);
+          assert.equal(after.payment.qr_path, qr);
+          assert.equal(after.calculation.people.length, 1);
+          assert.ok(
+            after.calculation.people.every(
+              (p: any) => p.organizer_paid === false,
+            ),
+          );
+        },
+      );
+      await t.test(
+        'Mixed assigned organizers have no implicit recipient; an explicit owner selects exactly one personal QR',
+        async () => {
+          const otherQr = await personalUpload(hien);
+          await call('save_member_payment_qr', [otherQr, 0, hien]);
+          assert.equal(
+            (await activity(first.id, yen)).payment.qr_path,
+            otherQr,
+          );
+          const left = await newSession('2030-06-07', ids.Yến, '1');
+          const right = await newSession('2030-06-07', ids.Hiền, '2');
+          await asAdmin();
+          const grouped = await call('create_club_activity', [
+            'badminton',
+            'Hai sân khác phụ trách',
+            [
+              { session_id: left.sid, label: 'Sân 1', basis: 'court' },
+              { session_id: right.sid, label: 'Sân 2', basis: 'court' },
+            ],
+            {},
+            null,
+          ]);
+          await asGuest();
+          const mixed = await activity(grouped, yen);
+          assert.equal(mixed.payment.organizer_id, null);
+          assert.equal(mixed.payment.qr_path, null);
+          assert.ok(
+            mixed.calculation.people.every((p: any) => !p.organizer_paid),
+          );
+          await asAdmin();
+          await call('save_activity', [
+            grouped,
+            { organizer_id: ids.Yến },
+            mixed.version,
+            null,
+          ]);
+          await asGuest();
+          const assigned = await activity(grouped, hien);
+          assert.equal(assigned.payment.qr_path, qr);
+          assert.equal(assigned.payment.organizer_id, ids.Yến);
+          assert.equal(
+            assigned.calculation.people.filter((p: any) => p.organizer_paid)
+              .length,
+            1,
+          );
+        },
+      );
+      await t.test(
+        'Reapplying migration preserves profiles, settled owners, fee summaries and receipts',
+        async () => {
+          const before = await snap(yen);
+          await db.exec('reset role');
+          await db.exec(
+            await readFile(
+              new URL(
+                '../supabase/migrations/202611190005_member_payment_qr.sql',
+                import.meta.url,
+              ),
+              'utf8',
+            ),
+          );
+          await asGuest();
+          const after = await snap(yen);
+          assert.deepEqual(
+            after.personal_payment_qr,
+            before.personal_payment_qr,
+          );
+          assert.deepEqual(after.activities, before.activities);
+        },
+      );
     },
   );
   await db.close();

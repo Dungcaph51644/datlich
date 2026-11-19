@@ -1,4 +1,4 @@
-import { netPaid, PAYMENT_STATUS, paymentStatus, TRIP_STATUS, type ClubActivity, type FeePerson } from './activityTypes';
+import { effectivePaid, netPaid, PAYMENT_STATUS, paymentStatus, TRIP_STATUS, type ClubActivity, type FeePerson } from './activityTypes';
 import type { Member } from './types';
 
 const money = (value: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
@@ -38,14 +38,14 @@ export function buildActivityMessage(a: ClubActivity, members: Member[], url: st
   lines.push('', 'Đối chiếu từng người:');
   for (const person of people) {
     const paid = netPaid(a.ledger ?? [], person.id);
-    const left = person.due - paid;
-    lines.push(`• ${person.name}: phải đóng ${money(person.due)} · đã đóng ròng ${money(paid)} · ${left < 0 ? `cần hoàn ${money(-left)}` : left > 0 ? `còn thiếu ${money(left)}` : person.due === 0 ? 'không phát sinh' : 'đã đủ'}`);
+    const left = person.due - effectivePaid(a.ledger ?? [], person);
+    lines.push(`• ${person.name}: phải đóng ${money(person.due)} · đã đóng ròng ${money(paid)}${person.organizer_paid ? ' · đã thanh toán mặc định (người phụ trách đặt sân)' : ''} · ${left < 0 ? `cần hoàn ${money(-left)}` : left > 0 ? `còn thiếu ${money(left)}` : person.due === 0 ? 'không phát sinh' : 'đã đủ'}`);
   }
   if (!people.length) lines.push('Chưa đủ dữ liệu để chia tiền.');
   lines.push('', `Tổng phải thu: ${money(calc?.total_due ?? 0)}`);
   if (calc?.surplus) lines.push(`Thu dư do làm tròn: ${money(calc.surplus)}`);
   for (const warning of calc?.warnings ?? []) lines.push(`Lưu ý: ${warning}`);
-  lines.push('Ghi nhận thanh toán thủ công; xem dữ liệu mới nhất tại:', url);
+  lines.push('Người phụ trách đặt sân được tính đã thanh toán mặc định; khoản thu thực tế xác nhận thủ công. Xem dữ liệu mới nhất tại:', url);
   return lines.join('\n');
 }
 
@@ -65,13 +65,14 @@ export function buildActivityCsv(a: ClubActivity, members: Member[]): string {
     ['Tổng phải thu (đ)', a.calculation?.total_due ?? 0],
     ['Thu dư do làm tròn (đ)', a.calculation?.surplus ?? 0],
     [],
-    ['Thành viên / khách', 'Mã thành viên', 'Nhóm tham gia / số suất', 'Phải đóng (đ)', 'Đã thu ròng (đ)', 'Còn thiếu (đ)', 'Cần hoàn lại (đ)', 'Trạng thái', 'Ghi chú đăng ký'],
+    ['Thành viên / khách', 'Mã thành viên', 'Nhóm tham gia / số suất', 'Phải đóng (đ)', 'Đã thu ròng (đ)', 'Còn thiếu (đ)', 'Cần hoàn lại (đ)', 'Trạng thái', 'Ghi chú đăng ký', 'Phần đã đủ mặc định của người phụ trách (đ)'],
   ];
   for (const p of activityFinancialPeople(a, members)) {
     const paid = netPaid(a.ledger ?? [], p.id);
-    const left = p.due - paid;
+    const effective = effectivePaid(a.ledger ?? [], p);
+    const left = p.due - effective;
     const participant = a.participants?.find((person) => person.id === p.id);
-    rows.push([p.name, members.find((m) => m.id === p.member_id)?.code ?? (participant?.invited_by ? `Khách của ${memberLabel(members, participant.invited_by)}` : ''), a.kind === 'trip' ? p.units / 1000 : p.groups.map((id) => a.groups?.find((g) => g.id === id)?.label ?? '').join(' + '), p.due, paid, Math.max(0, left), Math.max(0, -left), PAYMENT_STATUS[paymentStatus(p.due, paid)], participant?.note ?? '']);
+    rows.push([p.name, members.find((m) => m.id === p.member_id)?.code ?? (participant?.invited_by ? `Khách của ${memberLabel(members, participant.invited_by)}` : ''), a.kind === 'trip' ? p.units / 1000 : p.groups.map((id) => a.groups?.find((g) => g.id === id)?.label ?? '').join(' + '), p.due, paid, Math.max(0, left), Math.max(0, -left), PAYMENT_STATUS[paymentStatus(p.due, effective)] + (p.organizer_paid ? ' (mặc định · người phụ trách)' : ''), participant?.note ?? '', effective - paid]);
   }
   rows.push([], ['Khoản chi', 'Phạm vi', 'Dự toán (đ)', 'Thực tế (đ)', 'Nguồn chi', 'Người ứng', 'Ghi chú']);
   for (const expense of (a.expenses ?? []).filter((expense) => !expense.voided_at)) {

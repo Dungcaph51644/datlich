@@ -11,7 +11,8 @@ import './activityPayment.css';
 import './teamAlbum.css';
 import './albumSpace.css';
 import './albumLightbox.css';
-import './clubChat.css';
+import './clubMascot.css';
+import './mascotSmash.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

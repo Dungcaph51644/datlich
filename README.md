@@ -2,11 +2,13 @@
 
 React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: **mở link → chọn tên → bấm Đi**. Phân công CS, tài chính và du lịch dùng danh tính đã xác minh bằng mã cá nhân hoặc tài khoản Supabase Auth.
 
-## Chatbot AI hỏi đáp
+## Linh vật Cầu Cầu
 
-Nút **Hỏi trợ lý** ở góc dưới mở chat tiếng Việt về lịch đánh, người đặt sân, đăng ký/chỗ trống, chi phí và du lịch. Dữ liệu tra cứu mới theo từng câu hỏi; “tôi” theo tên đang chọn. Nguồn mở đúng buổi/bảng phí; tiền nháp và tiền đã chốt được phân biệt. Chatbot chỉ đọc, các thao tác dẫn về chức năng đang có. Tin nhắn chỉ giữ trong phiên; đổi tên/danh tính sẽ xóa nội dung.
+Quả cầu lông có biểu cảm và hoạt họa ở góc dưới bên trái, thay trợ lý chatbot: chúc mừng đăng ký đã lưu, vẫy tay khi hẹn buổi sau và nhắc lịch thật theo tên đang chọn. Bấm linh vật để xem chi tiết/tùy chỉnh; có nút tắt chuyển động và ẩn, bật lại ở cuối trang. Tôn trọng giảm chuyển động của thiết bị, nhường chỗ cho hộp thoại. Không cần AI, backend hay secret mới; cập nhật frontend là dùng được. Xem [cách dùng và kiểm thử](./docs/club-mascot.md).
 
-Để bật, chạy [migration chatbot](./supabase/migrations/202611190002_club_chat.sql), đặt **Supabase Edge Function secret** `AI_PROVIDER=lookup`, deploy function `club-chat` và frontend. Chế độ mặc định này trả lời theo mẫu từ Supabase, không gọi mô hình hoặc tốn phí token, không cần API key AI. OpenAI là tùy chọn trả phí khi chọn `AI_PROVIDER=openai`; không đặt key trong biến `VITE_`. Xem [hướng dẫn cấu hình, chi phí và nghiệm thu](./docs/ai-chatbot.md) và [mẫu biến môi trường máy chủ](./supabase/functions/.env.example). Dữ liệu tài chính vẫn yêu cầu xác minh theo cơ chế hiện có. Kiểm tra bằng `npm run test:chat`, `npm run check:chat-types` và `npm run check:chat-live`.
+## Trợ lý chatbot đã ngừng sử dụng
+
+Giao diện, CSS và kết nối chatbot đã được gỡ khỏi ứng dụng. Frontend mới không tải chatbot hoặc gửi yêu cầu đến `club-chat`. Mã backend và migration cũ được giữ để bảo toàn lịch sử nâng cấp; xem [ghi chú ngừng sử dụng và dọn Supabase](./docs/ai-chatbot.md). Không cần cấu hình AI để dùng website hoặc linh vật.
 
 ## Thành viên đã xác minh đăng ký và ghi chú hộ
 
@@ -29,6 +31,8 @@ Chạy [migration Album đội](./supabase/migrations/202611110001_team_album.sq
 Nếu đã cài album trước bản sửa xung đột, chạy tiếp [bản sửa HTTP 409](./supabase/migrations/202611110002_album_conflict_http.sql) để yêu cầu sửa từ phiên bản cũ trả thông báo ngay, tránh vòng lặp thử lại của PostgREST. Bản sửa giữ nguyên ảnh và dữ liệu.
 
 ## Tiền sân, thanh toán và du lịch
+
+**QR cá nhân tự động:** sau migration QR 003, chạy [migration QR theo người phụ trách](./supabase/migrations/202611190005_member_payment_qr.sql) rồi triển khai frontend mới. Thành viên đã xác minh vào **Tiền sân → QR nhận tiền của bạn**, tải một ảnh và lưu, không phải nhập tài khoản. Các buổi do họ phụ trách tự dùng QR đó; QR riêng cũ của từng buổi được giữ đến khi bấm **Dùng QR người phụ trách**. Phần đóng của người phụ trách cầu lông mặc định đã đủ, được ghi rõ là quy ước; không tạo khoản thu ngân hàng hoặc tăng số dư quỹ. Xem [hướng dẫn QR cá nhân và nghiệm thu](./docs/member-payment-qr.md).
 
 **QR chuyển khoản riêng:** chạy [migration QR thanh toán](./supabase/migrations/202611190003_activity_payment_qr.sql) sau các bản tài chính đã cài rồi triển khai frontend. Người phụ trách/admin chọn ảnh, xem trước, thay/bỏ và dùng lại QR; thành viên mở **Thanh toán** để xem phần còn phải đóng, tài khoản, sao chép, phóng to và tải ảnh. Xác nhận đã nhận tiền vẫn thủ công. Xem [cách dùng và nghiệm thu QR](./docs/payment-qr.md). Không cần thêm API key hoặc Edge Function.
 

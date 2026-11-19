@@ -1,0 +1,804 @@
+.club-mascot {
+  position: fixed;
+  z-index: 70;
+  left: max(20px, env(safe-area-inset-left));
+  bottom: calc(
+    max(20px, env(safe-area-inset-bottom)) + var(--mascot-lift, 0px)
+  );
+  width: 128px;
+  font-family: 'Be Vietnam Pro', sans-serif;
+  color: #173f30;
+  isolation: isolate;
+}
+.club-mascot[hidden] {
+  display: none;
+}
+.club-mascot[data-animated='true'] {
+  transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+.mascot-stage {
+  position: relative;
+  width: 128px;
+  height: 143px;
+}
+.mascot-launcher {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 55% 55% 30% 30%;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.mascot-launcher:focus-visible,
+.club-mascot button:focus-visible {
+  outline: 3px solid #78a940;
+  outline-offset: 4px;
+}
+.shuttle-character {
+  display: block;
+  width: 128px;
+  height: 134px;
+  overflow: visible;
+  filter: drop-shadow(0 5px 4px #173f3012);
+}
+.mascot-name {
+  position: absolute;
+  bottom: 0;
+  left: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 9px;
+  border: 1px solid #e4ebd7;
+  border-radius: 20px;
+  background: #fffff7ed;
+  box-shadow: 0 3px 10px #173f3010;
+  color: #527042;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+.mascot-name svg {
+  color: #7b9b30;
+}
+.mascot-orbit {
+  position: absolute;
+  inset: 23px 4px 10px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #e0efad85, #e0efad00 72%);
+  pointer-events: none;
+}
+.mascot-orbit span {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #99b46b;
+}
+.mascot-orbit span:nth-child(1) {
+  top: 5%;
+  left: 25%;
+}
+.mascot-orbit span:nth-child(2) {
+  top: 50%;
+  right: 4%;
+  width: 4px;
+  height: 4px;
+}
+.mascot-orbit span:nth-child(3) {
+  bottom: 12%;
+  left: 5%;
+}
+.mascot-bubble {
+  position: absolute;
+  bottom: 155px;
+  left: 4px;
+  width: 305px;
+  max-width: calc(
+    100vw - max(20px, env(safe-area-inset-left)) -
+      max(12px, env(safe-area-inset-right)) - 4px
+  );
+  padding: 15px 17px 10px;
+  border: 1px solid #dce5d0;
+  border-radius: 22px 22px 22px 7px;
+  background: linear-gradient(140deg, #fffffb, #f7faed);
+  box-shadow:
+    0 12px 45px #153d2c1a,
+    0 2px 5px #153d2c08,
+    inset 0 1px 0 white;
+  transform-origin: 10% 100%;
+  max-height: calc(100dvh - 190px - var(--mascot-lift, 0px));
+  overflow-y: auto;
+}
+.mascot-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 38px;
+  width: 13px;
+  height: 13px;
+  background: #f7faed;
+  border-right: 1px solid #dce5d0;
+  border-bottom: 1px solid #dce5d0;
+  transform: rotate(45deg);
+  border-bottom-right-radius: 4px;
+}
+.mascot-bubble-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin: -5px -7px 3px 0;
+}
+.mascot-bubble-top > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #748562;
+}
+.mascot-bubble-top i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a6c552;
+  box-shadow: 0 0 0 3px #a6c55218;
+}
+.mascot-icon-button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #7b876d;
+  cursor: pointer;
+}
+.mascot-icon-button:hover {
+  color: #174a32;
+  background: #e9efd9;
+}
+.mascot-message h3 {
+  margin: 0 0 7px;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: -0.6px;
+  color: #21452f;
+}
+.mascot-message p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #5b6c51;
+  overflow-wrap: anywhere;
+}
+.mascot-detail {
+  display: block;
+  padding-top: 11px;
+  margin-top: 11px;
+  border-top: 1px dashed #dce4d0;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #788568;
+  overflow-wrap: anywhere;
+}
+.mascot-bubble-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 5px;
+}
+.mascot-session-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+  color: #46672d;
+  cursor: pointer;
+}
+.mascot-session-link:hover {
+  color: #1b432d;
+}
+.mascot-banter-button {
+  gap: 5px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background: #f6ecdf;
+  color: #8b5c43;
+}
+.mascot-banter-button:hover {
+  background: #f1e2d1;
+  color: #714530;
+}
+.mascot-settings-button {
+  margin-left: auto;
+}
+.mascot-settings {
+  padding-top: 11px;
+  margin-top: 5px;
+  border-top: 1px solid #e1e8d7;
+}
+.mascot-settings label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.mascot-settings label + label {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e1e8d7;
+}
+.mascot-settings label span {
+  font-weight: 600;
+}
+.mascot-settings label small {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 400;
+  color: #7b876d;
+}
+.mascot-settings input {
+  appearance: none;
+  flex: 0 0 34px;
+  height: 21px;
+  border-radius: 20px;
+  border: 1px solid #ccd8be;
+  background: #dbe3d0;
+  cursor: pointer;
+  position: relative;
+}
+.mascot-settings input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px #163d2a26;
+}
+.mascot-settings input:checked {
+  background: #668a3b;
+  border-color: #668a3b;
+}
+.mascot-settings input:checked::after {
+  left: 15px;
+}
+.mascot-settings input:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.mascot-settings > button {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  padding: 7px 0;
+  border: 0;
+  color: #68775e;
+  background: transparent;
+  font-size: 11px;
+  cursor: pointer;
+}
+.mascot-settings > button small {
+  margin-left: auto;
+  color: #8a957d;
+  font-size: 9px;
+}
+.mascot-settings > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.mascot-footer-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #c7d4b333;
+  border-radius: 20px;
+  color: inherit;
+  background: transparent;
+  opacity: 0.8;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.mascot-footer-toggle:hover {
+  opacity: 1;
+}
+.shuttle-body {
+  transform-origin: 100px 170px;
+}
+.shuttle-feathers {
+  transform-origin: 100px 125px;
+}
+.shuttle-feather {
+  transform-origin: 100px 125px;
+}
+.shuttle-eyes {
+  transform-origin: 100px 152px;
+}
+.shuttle-arm {
+  transform-origin: 74px 144px;
+}
+.arm-right {
+  transform-origin: 129px 145px;
+}
+.shuttle-shadow {
+  transform-origin: 100px 192px;
+}
+.shuttle-sparkles {
+  transform-origin: 100px 105px;
+}
+.club-mascot[data-animated='true'] .mascot-bubble {
+  animation: mascot-bubble-in 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.club-mascot[data-animated='true'] .shuttle-body {
+  animation: mascot-breathe 5s ease-in-out infinite;
+}
+.club-mascot[data-animated='true'] .shuttle-shadow {
+  animation: mascot-shadow 5s ease-in-out infinite;
+}
+.club-mascot[data-animated='true'] .shuttle-feathers {
+  animation: mascot-feathers 5s ease-in-out infinite;
+}
+.club-mascot[data-animated='true'] .shuttle-eyes {
+  animation: mascot-blink 7s infinite;
+}
+.club-mascot[data-animated='true'] .shuttle-sparkles {
+  animation: mascot-twinkle 5s ease-in-out infinite;
+}
+.club-mascot[data-animated='true'] .mascot-launcher:hover .shuttle-body {
+  animation: mascot-greet 0.65s cubic-bezier(0.2, 0.8, 0.3, 1.2) both;
+}
+.club-mascot[data-animated='true'] .mood-happy .shuttle-body {
+  animation: mascot-hop 1s cubic-bezier(0.3, 0.05, 0.3, 1) 2;
+}
+.club-mascot[data-animated='true'] .mood-happy .arm-left {
+  animation: mascot-cheer 0.5s ease-in-out 4;
+}
+.club-mascot[data-animated='true'] .mood-happy .arm-right {
+  animation: mascot-racket 0.5s ease-in-out 4;
+}
+.club-mascot[data-animated='true'] .mood-happy .feather-outer-left {
+  animation: mascot-feather-fan 0.5s ease-in-out 4;
+}
+.club-mascot[data-animated='true'] .mood-happy .feather-outer-right {
+  animation: mascot-feather-fan 0.5s ease-in-out reverse 4;
+}
+.club-mascot[data-animated='true'] .mood-wave .arm-left {
+  animation: mascot-wave 0.7s ease-in-out 3;
+}
+.club-mascot[data-animated='true'] .mood-remind .shuttle-body {
+  animation: mascot-tilt 1.4s ease-in-out 2;
+}
+.shuttle-spiral,
+.shuttle-heart-eyes,
+.shuttle-floating-heart {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.club-mascot[data-animated='true'] .mood-cheeky .shuttle-body {
+  animation: mascot-sass 0.85s cubic-bezier(0.3, 0.1, 0.3, 1) 2;
+}
+.club-mascot[data-animated='true'] .mood-cheeky .arm-left {
+  animation: mascot-wave 0.55s ease-in-out 3;
+}
+.club-mascot[data-animated='true'] .mood-cool .shuttle-body {
+  animation: mascot-strut 1.1s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .shuttle-shades-glint {
+  animation: mascot-glint 1.4s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .mood-dizzy .shuttle-body {
+  animation: mascot-dizzy 1.25s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .shuttle-spiral {
+  animation: mascot-spiral 2s linear 2;
+}
+.club-mascot[data-animated='true'] .shuttle-sweat {
+  animation: mascot-sweat 1.4s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .mood-love .shuttle-body {
+  animation: mascot-swoon 1.5s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .shuttle-heart-eyes {
+  animation: mascot-heartbeat 1.5s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .shuttle-floating-heart {
+  animation: mascot-heart-float 1.8s ease-in-out 2;
+}
+.club-mascot[data-animated='true'] .shuttle-floating-heart:nth-child(2) {
+  animation-delay: 0.35s;
+}
+@keyframes mascot-sass {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-7deg) translateY(-2px);
+  }
+  65% {
+    transform: rotate(5deg) translateY(-4px);
+  }
+}
+@keyframes mascot-strut {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  35% {
+    transform: translateY(-3px) rotate(-5deg);
+  }
+  70% {
+    transform: translateY(-1px) rotate(3deg);
+  }
+}
+@keyframes mascot-glint {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  45%,
+  60% {
+    opacity: 1;
+  }
+}
+@keyframes mascot-dizzy {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(-7deg) translateX(-2px);
+  }
+  45% {
+    transform: rotate(6deg) translateX(2px);
+  }
+  70% {
+    transform: rotate(-4deg);
+  }
+}
+@keyframes mascot-spiral {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes mascot-sweat {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  65% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
+}
+@keyframes mascot-swoon {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  30% {
+    transform: rotate(-5deg) translateY(-3px);
+  }
+  70% {
+    transform: rotate(5deg) translateY(-3px);
+  }
+}
+@keyframes mascot-heartbeat {
+  0%,
+  65%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.09);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+@keyframes mascot-heart-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translateY(-8px) rotate(6deg);
+    opacity: 1;
+  }
+}
+.mascot-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.mascot-confetti i {
+  display: none;
+  position: absolute;
+  width: 5px;
+  height: 9px;
+  border-radius: 2px;
+  top: 65%;
+  left: 50%;
+  background: #bad953;
+}
+.mascot-confetti i:nth-child(3n) {
+  background: #e2a18b;
+}
+.mascot-confetti i:nth-child(3n + 1) {
+  background: #4a7859;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+.club-mascot[data-animated='true'] .mascot-confetti i {
+  display: block;
+  animation: mascot-confetti 1.4s cubic-bezier(0.14, 0.6, 0.32, 1) both;
+  animation-delay: calc(var(--particle) * 35ms);
+}
+@keyframes mascot-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(1deg);
+  }
+}
+@keyframes mascot-shadow {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scaleX(0.87);
+    opacity: 0.1;
+  }
+}
+@keyframes mascot-feathers {
+  0%,
+  100% {
+    transform: rotate(-1deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+@keyframes mascot-blink {
+  0%,
+  42%,
+  46%,
+  89%,
+  93%,
+  100% {
+    transform: scaleY(1);
+  }
+  44%,
+  91% {
+    transform: scaleY(0.12);
+  }
+}
+@keyframes mascot-twinkle {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+@keyframes mascot-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes mascot-hop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  16% {
+    transform: translateY(4px) scale(1.07, 0.92);
+  }
+  43% {
+    transform: translateY(-16px) rotate(-5deg) scale(0.97, 1.04);
+  }
+  68% {
+    transform: translateY(-5px) rotate(3deg);
+  }
+  84% {
+    transform: translateY(2px) scale(1.04, 0.97);
+  }
+}
+@keyframes mascot-wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  30% {
+    transform: rotate(38deg);
+  }
+  65% {
+    transform: rotate(12deg);
+  }
+}
+@keyframes mascot-cheer {
+  0%,
+  100% {
+    transform: rotate(5deg);
+  }
+  50% {
+    transform: rotate(48deg);
+  }
+}
+@keyframes mascot-racket {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-30deg);
+  }
+}
+@keyframes mascot-feather-fan {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+@keyframes mascot-tilt {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  40%,
+  65% {
+    transform: rotate(-7deg) translateY(-3px);
+  }
+}
+@keyframes mascot-greet {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(6deg) translateY(-5px);
+  }
+}
+@keyframes mascot-confetti {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+        calc((var(--particle) - 4) * var(--confetti-step, 17px)),
+        calc(-1 * var(--rise))
+      )
+      rotate(calc(var(--particle) * 85deg));
+  }
+}
+@media (max-width: 600px) {
+  .club-mascot {
+    --confetti-step: 11px;
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(
+      max(12px, env(safe-area-inset-bottom)) + var(--mascot-lift, 0px)
+    );
+    width: 99px;
+  }
+  .mascot-stage {
+    width: 99px;
+    height: 114px;
+  }
+  .shuttle-character {
+    width: 99px;
+    height: 104px;
+  }
+  .mascot-name {
+    left: 16px;
+    font-size: 8px;
+    padding: 3px 8px;
+  }
+  .mascot-bubble {
+    bottom: 123px;
+    left: 4px;
+    width: 284px;
+    max-width: calc(
+      100vw - max(12px, env(safe-area-inset-left)) -
+        max(12px, env(safe-area-inset-right)) - 4px
+    );
+    max-height: calc(100dvh - 150px - var(--mascot-lift, 0px));
+    padding: 14px 16px 8px;
+  }
+  .mascot-icon-button {
+    width: 40px;
+    height: 40px;
+  }
+  .mascot-bubble-top {
+    margin-top: -8px;
+  }
+  .mascot-session-link {
+    min-height: 42px;
+  }
+  .mascot-settings > button {
+    min-height: 44px;
+  }
+  .mascot-message p {
+    font-size: 12px;
+  }
+  .mascot-message h3 {
+    font-size: 16px;
+  }
+  footer {
+    flex-wrap: wrap;
+  }
+}
+@media (max-height: 520px) {
+  .mascot-bubble {
+    max-height: calc(100dvh - 180px - var(--mascot-lift, 0px));
+    overflow-y: auto;
+  }
+  .club-mascot {
+    bottom: calc(8px + var(--mascot-lift, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-mascot,
+  .club-mascot *,
+  .club-mascot *::before,
+  .club-mascot *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .mascot-confetti {
+    display: none;
+  }
+}

@@ -61,6 +61,8 @@ export interface FeePerson {
   groups: string[];
   exact: number;
   due: number;
+  /** Server-assigned convention; never a bank receipt. Badminton only. */
+  organizer_paid?: boolean;
 }
 export interface FeeCalculation {
   total_cost: number;
@@ -160,6 +162,13 @@ export interface ActivityPaymentSettings {
   account_number: string;
   transfer_note: string;
   updated_at?: string;
+  source?: 'activity' | 'member';
+  organizer_id?: string | null;
+}
+export interface MemberPaymentQr {
+  member_id: string;
+  qr_path: string | null;
+  version: number;
 }
 export interface PaymentQrAsset {
   path: string;
@@ -173,6 +182,7 @@ export interface ActivityData {
   revision: number;
   club?: QuickSnapshot;
   automatic_fees?: boolean;
+  personal_payment_qr?: MemberPaymentQr | null;
   activities: ClubActivity[];
 }
 export const TRIP_STATUS = {
@@ -209,6 +219,11 @@ export function netPaid(entries: LedgerEntry[], personId: string) {
   return entries
     .filter((e) => !e.voided_at && e.person_id === personId)
     .reduce((n, e) => n + (e.kind === 'refund' ? -e.amount : e.amount), 0);
+}
+/** Covers the organizer's own share without inventing cash or a refundable transfer. */
+export function effectivePaid(entries: LedgerEntry[], person: FeePerson) {
+  const actual = netPaid(entries, person.id);
+  return person.organizer_paid ? Math.max(person.due, actual) : actual;
 }
 export function paymentStatus(due: number, paid: number) {
   return due === 0 && paid === 0
