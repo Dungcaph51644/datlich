@@ -27,6 +27,7 @@ export interface ChatReply {
   checkedAt: string;
   needsMember?: boolean;
   needsVerification?: boolean;
+  mode?: 'lookup' | 'ai';
 }
 export interface ChatContext {
   version: number;

@@ -15,6 +15,18 @@ export const normalize = (value: string) =>
 const dateKey = (date: Date) => date.toISOString().slice(0, 10);
 const plus = (date: Date, days: number) =>
   new Date(date.getTime() + days * 86400000);
+export function resolvedQuestion(question: ChatQuestion): string {
+  const current = normalize(question.message);
+  const followup =
+    /^(con |vay |the |buoi do|hom do|nguoi do|bao nhieu|ai di|da chot|tuan sau|tuan truoc)/.test(
+      current,
+    );
+  return (
+    (followup && question.history.length
+      ? normalize(question.history.at(-1)!) + ' '
+      : '') + current
+  );
+}
 export function planQuestion(
   question: ChatQuestion,
   now = new Date(),
@@ -22,14 +34,7 @@ export function planQuestion(
   const current = normalize(question.message);
   // Re-read facts on every turn. Earlier questions only resolve short follow-ups;
   // previous assistant answers are never reused as evidence.
-  const followup =
-    /^(con |vay |the |buoi do|hom do|nguoi do|bao nhieu|ai di|da chot|tuan sau|tuan truoc)/.test(
-      current,
-    );
-  const q =
-    (followup && question.history.length
-      ? normalize(question.history.at(-1)!) + ' '
-      : '') + current;
+  const q = resolvedQuestion(question);
   const vn = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Ho_Chi_Minh',
     year: 'numeric',
@@ -118,7 +123,7 @@ export function planQuestion(
     }
   }
   const scope =
-    /huong dan|lam sao|cach (dang ky|them|sua|chot|chia|thanh toan|cap ma)|su dung|chatbot.*(lam|giup)/.test(
+    /huong dan|lam sao|cach (dang ky|them|sua|chot|chia|thanh toan|cap ma)|su dung|chatbot.*(lam|giup)|^(?:hay |giup |vui long )?(?:dang ky|huy dang ky|them (?:buoi|thanh vien)|tao buoi|sua lich|doi gio|ghi nhan thanh toan|xac nhan.*thanh toan)/.test(
       current,
     )
       ? 'guide'

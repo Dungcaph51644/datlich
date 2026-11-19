@@ -7,6 +7,25 @@ import { createClient } from '@supabase/supabase-js';
 import { PGlite } from '@electric-sql/pglite';
 import type { QuickSnapshot } from '../src/types';
 import type { BookingData } from '../src/bookingTypes';
+import { answerLookup } from '../supabase/functions/_shared/chat/lookup';
+import {
+  contextSources,
+  planQuestion,
+} from '../supabase/functions/_shared/chat/intent';
+import type { ChatContext } from '../supabase/functions/_shared/chat/types';
+
+function lookup(facts: ChatContext, message: string) {
+  const q = {
+    message,
+    history: [],
+    memberId: null,
+    bookingToken: null,
+    sessionId: null,
+    activityId: null,
+  };
+  const plan = planQuestion(q);
+  return answerLookup(q, plan, facts, contextSources(facts, plan));
+}
 
 const env = loadEnv('development', process.cwd(), 'VITE_');
 if (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_PUBLISHABLE_KEY)
@@ -129,6 +148,14 @@ try {
     assert.equal(fact.start_time, s.start_time);
     assert.equal(fact.venue, s.venue);
     assert.equal(fact.booking_status, s.booking_status);
+    const answer = lookup(result, 'Lịch buổi này?');
+    assert.ok(answer.answer.includes(s.venue.slice(0, 110)));
+    assert.ok(answer.source_ids.includes(s.id));
+    assert.ok(answer.answer.length <= 4000);
+    if (s.booking_status === 'cancelled') {
+      assert.match(answer.answer, /ĐÃ HỦY/);
+      assert.doesNotMatch(answer.answer, /Còn \d+ chỗ/);
+    }
     const going = source.attendance.filter(
       (a) => a.session_id === s.id && a.status === 'going',
     ).length;
@@ -195,8 +222,10 @@ try {
     throw new Error('API chatbot thật lỗi: ' + probe.error.message);
   else {
     assert.equal(probe.data.version, 1);
+    const reply = lookup(probe.data, 'Lịch hôm nay?');
+    assert.ok(reply.answer.trim() && reply.answer.length <= 4000);
     console.log(
-      'RPC chatbot đã có trên Supabase thật, tra cứu công khai thành công.',
+      'RPC chatbot thật và bộ trả lời miễn phí tra cứu công khai thành công; không gọi mô hình AI.',
     );
   }
 } finally {

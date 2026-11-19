@@ -26,6 +26,7 @@ const { render, screen, fireEvent, waitFor, cleanup, act } =
   await import('@testing-library/react');
 const { default: ClubChat } = await import('../src/ClubChat');
 const reply = {
+  mode: 'lookup' as const,
   answer: 'Buổi 24/11/2026 lúc 18:00 đã hủy.',
   sources: [
     {
@@ -46,9 +47,7 @@ const props = (more: Partial<ClubChatProps> = {}): ClubChatProps => ({
 });
 afterEach(cleanup);
 function open() {
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Mở trợ lý AI cầu lông' }),
-  );
+  fireEvent.click(screen.getByRole('button', { name: 'Mở trợ lý cầu lông' }));
 }
 function ask(text: string) {
   fireEvent.change(
@@ -82,6 +81,7 @@ test('Chat supports opening, pending state, safe text, detail navigation, minimi
     resolve({ ...reply, answer: '<img src=x onerror=alert(1)> Buổi đã hủy.' }),
   );
   assert.ok(screen.getByText(/<img src=x/));
+  assert.ok(screen.getByText(/không gọi dịch vụ AI/));
   assert.equal(document.querySelector('img[src=x]'), null);
   fireEvent.click(screen.getByRole('button', { name: 'Thu nhỏ trò chuyện' }));
   assert.equal(screen.queryByRole('dialog'), null);

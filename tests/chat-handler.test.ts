@@ -26,6 +26,7 @@ const q = (message: string, history: string[] = []): ChatQuestion => ({
   activityId: null,
 });
 const env = {
+  AI_PROVIDER: 'openai',
   SUPABASE_URL: 'https://test.supabase.co',
   SUPABASE_ANON_KEY: 'public-key',
   SUPABASE_SERVICE_ROLE_KEY: 'server-only-key',

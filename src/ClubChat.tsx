@@ -45,6 +45,7 @@ export default function ClubChat({
   ask,
 }: ClubChatProps) {
   const [view, setView] = useState<'closed' | 'open' | 'minimized'>('closed');
+  const [mode, setMode] = useState<'lookup' | 'ai' | undefined>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -136,6 +137,7 @@ export default function ClubChat({
     try {
       const reply = await ask(text, history, controller.signal);
       if (seq !== sequence.current) return;
+      setMode(reply.mode);
       setMessages((previous) =>
         [
           ...previous,
@@ -171,7 +173,7 @@ export default function ClubChat({
         <button
           ref={launcher}
           className={`club-chat-launcher ${view === 'minimized' ? 'minimized' : ''}`}
-          aria-label="Mở trợ lý AI cầu lông"
+          aria-label="Mở trợ lý cầu lông"
           aria-expanded={false}
           onClick={() => setView('open')}
         >
@@ -205,7 +207,7 @@ export default function ClubChat({
               <h2 id="club-chat-title">
                 Bạn đồng hành <Sparkles size={14} />
               </h2>
-              <p>Trợ lý AI · Cầu lông & những người bạn</p>
+              <p>Trợ lý nhóm · Cầu lông & những người bạn</p>
             </div>
             <div className="club-chat-tools">
               <button
@@ -423,9 +425,13 @@ export default function ClubChat({
               <span>{draft.length}/800</span>
             </div>
             <p className="club-chat-privacy">
-              Dữ liệu liên quan được gửi đến dịch vụ AI khi hỏi. Tin nhắn chỉ
-              giữ trong phiên này; đổi tên sẽ xóa nội dung. Hỏi lại để xem cập
-              nhật mới.
+              {mode === 'lookup'
+                ? 'Tra cứu dữ liệu nhóm, không gọi dịch vụ AI. '
+                : mode === 'ai'
+                  ? 'Dữ liệu liên quan được gửi đến dịch vụ AI khi hỏi. '
+                  : ''}
+              Tin nhắn chỉ giữ trong phiên này; đổi tên sẽ xóa nội dung. Hỏi lại
+              để xem cập nhật mới.
             </p>
           </form>
         </section>

@@ -25,6 +25,103 @@ export interface ChatModel {
   ): Promise<ModelAnswer>;
 }
 
+async function providerFailure(response: Response): Promise<ChatError> {
+  // Provider messages can contain key fragments, organization IDs or request data.
+  // Read only error codes and return our own messages; never relay the raw body.
+  const body: unknown = await response.json().catch(() => null);
+  const error =
+    body && typeof body === 'object' && 'error' in body ? body.error : null;
+  const code =
+    error && typeof error === 'object' && 'code' in error ? error.code : null;
+  const type =
+    error && typeof error === 'object' && 'type' in error ? error.type : null;
+
+  // Specific billing codes take precedence over the broader insufficient_quota type.
+  if (code === 'credit_balance_exhausted')
+    return new ChatError(
+      429,
+      'model_credits_exhausted',
+      'Tài khoản API của trợ lý đã hết tín dụng. Người phụ trách cần bổ sung tín dụng trong OpenAI Billing trước khi thử lại.',
+    );
+  if (
+    [
+      'organization_spend_limit_exceeded',
+      'project_spend_limit_exceeded',
+      'api_key_spend_limit_exceeded',
+    ].includes(String(code))
+  )
+    return new ChatError(
+      429,
+      'model_spend_limit',
+      'Trợ lý đã đạt hạn mức chi tiêu API. Người phụ trách cần kiểm tra hạn mức của key, project hoặc organization trong OpenAI Limits.',
+    );
+  if (
+    code === 'organization_usage_limit_exceeded' ||
+    code === 'usage_limit_exceeded'
+  )
+    return new ChatError(
+      429,
+      'model_usage_limit',
+      'Tài khoản API của trợ lý đã đạt hạn mức sử dụng. Người phụ trách cần kiểm tra hạn mức được cấp trong OpenAI Limits.',
+    );
+  if (code === 'billing_not_active')
+    return new ChatError(
+      503,
+      'model_billing_inactive',
+      'Thanh toán API của trợ lý chưa được kích hoạt. Người phụ trách cần kiểm tra OpenAI Billing trước khi thử lại.',
+    );
+  if (code === 'insufficient_quota' || type === 'insufficient_quota')
+    return new ChatError(
+      429,
+      'model_quota',
+      'Tài khoản API của trợ lý chưa đủ tín dụng hoặc đã chạm hạn mức. Người phụ trách cần kiểm tra OpenAI Billing và Limits; chờ một phút có thể không khắc phục được.',
+    );
+  if (
+    response.status === 429 &&
+    (code === 'rate_limit_exceeded' ||
+      code === 'slow_down' ||
+      type === 'rate_limit_error')
+  ) {
+    const header = response.headers.get('Retry-After')?.trim() ?? '';
+    const seconds = /^\d+(?:\.\d+)?$/.test(header)
+      ? Number(header)
+      : (Date.parse(header) - Date.now()) / 1000;
+    const retryAfter =
+      Number.isFinite(seconds) && seconds > 0
+        ? Math.min(86400, Math.ceil(seconds))
+        : 60;
+    return new ChatError(
+      429,
+      'model_rate_limit',
+      'Dịch vụ AI đang nhận quá nhiều yêu cầu. Bạn chờ một chút rồi thử lại nhé.',
+      retryAfter,
+    );
+  }
+  if (response.status === 429)
+    return new ChatError(
+      429,
+      'model_limit_unknown',
+      'Dịch vụ AI từ chối yêu cầu do giới hạn, nhưng chưa xác định được loại giới hạn. Người phụ trách cần kiểm tra OpenAI Billing và Limits.',
+    );
+  if (response.status === 401)
+    return new ChatError(
+      503,
+      'model_authentication',
+      'Dịch vụ AI chưa xác thực được API key. Người phụ trách cần kiểm tra lại key trong Supabase Secrets.',
+    );
+  if (code === 'model_not_found' || response.status === 403)
+    return new ChatError(
+      503,
+      'model_access',
+      'Tài khoản API chưa truy cập được dịch vụ hoặc mô hình đã cấu hình. Người phụ trách cần kiểm tra quyền truy cập và AI_MODEL.',
+    );
+  return new ChatError(
+    502,
+    'model_unavailable',
+    'Dịch vụ AI chưa trả lời được. Bạn có thể thử lại hoặc mở trang chức năng.',
+  );
+}
+
 export function createChatModel(
   config: ModelConfig,
   request: typeof fetch = fetch,
@@ -98,15 +195,7 @@ Nếu câu ngoài phạm vi quản lý nhóm thì mời hỏi về lịch, sân,
           }),
         },
       );
-      if (!response.ok)
-        throw new ChatError(
-          response.status === 429 ? 429 : 502,
-          'model_unavailable',
-          response.status === 429
-            ? 'Dịch vụ AI đang đạt giới hạn. Bạn thử lại sau một phút nhé.'
-            : 'Dịch vụ AI chưa trả lời được. Bạn có thể thử lại hoặc mở trang chức năng.',
-          response.status === 429 ? 60 : 0,
-        );
+      if (!response.ok) throw await providerFailure(response);
       const body = await response.json();
       if (body.status !== 'completed')
         throw new ChatError(

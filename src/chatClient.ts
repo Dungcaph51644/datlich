@@ -14,7 +14,7 @@ export class ChatClientError extends Error {
   }
 }
 const notDeployed =
-  'Trợ lý AI chưa được triển khai trên máy chủ. Người phụ trách cần triển khai chức năng trợ lý trước khi sử dụng.';
+  'Trợ lý chưa được triển khai trên máy chủ. Người phụ trách cần triển khai chức năng trợ lý trước khi sử dụng.';
 
 /** Missing functions return 404 to OPTIONS, blocking the POST in browsers.
  * A simple GET can diagnose this without preflight, credentials, chat content
@@ -71,6 +71,7 @@ export function parseChatReply(value: unknown): ChatReply {
     typeof data.checkedAt !== 'string' ||
     !Number.isFinite(Date.parse(data.checkedAt)) ||
     !Array.isArray(data.sources) ||
+    (data.mode != null && data.mode !== 'lookup' && data.mode !== 'ai') ||
     data.sources.length > 20 ||
     !data.sources.every(safeChatSource)
   )

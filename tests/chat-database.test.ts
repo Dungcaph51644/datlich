@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
+import { answerLookup } from '../supabase/functions/_shared/chat/lookup';
+import {
+  contextSources,
+  planQuestion,
+} from '../supabase/functions/_shared/chat/intent';
 
 test('Chat context uses live scoped PostgreSQL facts, existing permissions, exact fees and durable quotas', async (t) => {
   const db = new PGlite();
@@ -89,6 +94,18 @@ test('Chat context uses live scoped PostgreSQL facts, existing permissions, exac
       opts.all ?? false,
       opts.token ?? null,
     ]);
+  function lookup(facts: any, message: string) {
+    const q = {
+      message,
+      history: [],
+      memberId: ids.Yến,
+      bookingToken: null,
+      sessionId: null,
+      activityId: null,
+    };
+    const plan = planQuestion(q, new Date('2030-05-21T04:00:00Z'));
+    return answerLookup(q, plan, facts, contextSources(facts, plan));
+  }
   await asAdmin();
   const sid = await call('save_session', [
     null,
@@ -193,6 +210,10 @@ test('Chat context uses live scoped PostgreSQL facts, existing permissions, exac
         second.sessions.find((s: any) => s.id === sid).registered_count,
         2,
       );
+      const answer = lookup(second, 'Lịch tuần này?').answer;
+      assert.match(answer, /Sân đã đổi/);
+      assert.match(answer, /19:00/);
+      assert.match(answer, /Sân hủy.*ĐÃ HỦY/);
       assert.equal(
         (
           await call('get_chat_context', [
@@ -237,6 +258,9 @@ test('Chat context uses live scoped PostgreSQL facts, existing permissions, exac
       ]);
       assert.equal(activity.expenses.length, 2);
       assert.equal(activity.ledger, undefined);
+      const answer = lookup(draft, 'Tôi còn thiếu bao nhiêu?').answer;
+      assert.match(answer, /180\.000đ \(TẠM TÍNH, chưa phải nợ đã chốt\)/);
+      assert.match(answer, /Chưa có bảng ĐÃ CHỐT phù hợp/);
       const other = await context('finance', {
         member: ids.Hiền,
         personal: true,
@@ -286,6 +310,14 @@ test('Chat context uses live scoped PostgreSQL facts, existing permissions, exac
       assert.equal(frozen.people[0].due, 180000);
       assert.equal(frozen.people[0].net_paid, 80000);
       assert.equal(frozen.people[0].balance, 100000);
+      const facts = await context('finance', {
+        member: ids.Yến,
+        personal: true,
+        token,
+      });
+      const answer = lookup(facts, 'Tôi còn thiếu bao nhiêu?').answer;
+      assert.match(answer, /thu ròng đã ghi nhận 80\.000đ/);
+      assert.match(answer, /còn thiếu 100\.000đ/);
     },
   );
   await t.test(

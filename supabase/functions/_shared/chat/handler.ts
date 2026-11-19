@@ -6,6 +6,7 @@ import {
 } from './types.ts';
 import { contextSources, planQuestion, normalize } from './intent.ts';
 import { createChatModel, type ChatModel } from './model.ts';
+import { answerLookup } from './lookup.ts';
 
 export type ChatEnvironment = Record<string, string | undefined>;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -73,6 +74,8 @@ export function createChatHandler(
   } = {},
 ) {
   const request = dependencies.fetch ?? fetch;
+  const provider = env.AI_PROVIDER ?? 'lookup';
+  const mode = provider === 'lookup' ? 'lookup' : 'ai';
   const allowedOrigins = (
     env.CHAT_ALLOWED_ORIGINS ?? 'https://caulongteam.netlify.app'
   )
@@ -154,6 +157,7 @@ export function createChatHandler(
           sources: [],
           checkedAt,
           needsMember: true,
+          mode,
         } satisfies ChatReply);
       const url = env.SUPABASE_URL?.replace(/\/$/, '');
       const publicKey =
@@ -163,12 +167,13 @@ export function createChatHandler(
         !url ||
         !publicKey ||
         !serverKey ||
-        (!env.OPENAI_API_KEY && !dependencies.model)
+        (provider !== 'lookup' && provider !== 'openai') ||
+        (provider === 'openai' && !env.OPENAI_API_KEY && !dependencies.model)
       )
         throw new ChatError(
           503,
           'configuration',
-          'Trợ lý AI chưa được bật trên máy chủ. Bạn vẫn có thể xem trực tiếp các mục Lịch đánh, Tiền sân và Du lịch.',
+          'Trợ lý chưa được cấu hình đúng trên máy chủ. Bạn vẫn có thể xem trực tiếp các mục Lịch đánh, Tiền sân và Du lịch.',
         );
       const bearer =
         req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
@@ -254,6 +259,7 @@ export function createChatHandler(
           sources: [],
           checkedAt: context.checked_at,
           needsMember: true,
+          mode,
         } satisfies ChatReply);
       if (
         (plan.scope === 'finance' ||
@@ -276,6 +282,7 @@ export function createChatHandler(
           ],
           checkedAt: context.checked_at,
           needsVerification: true,
+          mode,
         } satisfies ChatReply);
       }
       const sources = contextSources(context, plan);
@@ -287,6 +294,22 @@ export function createChatHandler(
           { id: 'members', label: 'Mở thành viên', href: '#members' },
           { id: 'booking', label: 'Mở Phân công CS', href: '#booking' },
         );
+      if (!sources.length)
+        sources.push({
+          id: plan.scope,
+          label:
+            plan.scope === 'travel'
+              ? 'Mở Du lịch'
+              : plan.scope === 'finance'
+                ? 'Mở Tiền sân'
+                : 'Mở lịch đánh',
+          href:
+            plan.scope === 'travel'
+              ? '#travel'
+              : plan.scope === 'finance'
+                ? '#finance'
+                : '#schedule',
+        });
       const ip =
         req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
         req.headers.get('x-real-ip') ||
@@ -319,6 +342,15 @@ export function createChatHandler(
           'Đã đạt giới hạn câu hỏi. Bạn nghỉ một chút rồi thử lại, hoặc mở trực tiếp trang chức năng nhé.',
           budget.retry_after,
         );
+      if (provider === 'lookup') {
+        const answer = answerLookup(question, plan, context, sources);
+        return respond({
+          answer: answer.answer,
+          sources: sources.filter((s) => answer.source_ids.includes(s.id)),
+          checkedAt: context.checked_at,
+          mode,
+        } satisfies ChatReply);
+      }
       // Remove credential/member identifiers before any provider receives context.
       const modelContext = {
         ...context,
@@ -345,7 +377,7 @@ export function createChatHandler(
         dependencies.model ??
         createChatModel(
           {
-            provider: env.AI_PROVIDER ?? 'openai',
+            provider,
             apiKey: env.OPENAI_API_KEY!,
             baseUrl: env.AI_BASE_URL ?? 'https://api.openai.com/v1',
             model: env.AI_MODEL ?? 'gpt-6-luna',
@@ -375,6 +407,7 @@ export function createChatHandler(
         answer: answer.answer,
         sources: cited.length ? cited : sources,
         checkedAt: context.checked_at,
+        mode,
       } satisfies ChatReply);
     } catch (error) {
       const failure =
