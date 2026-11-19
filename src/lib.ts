@@ -30,6 +30,8 @@ export async function rpc<T = unknown>(
     throw new Error('Bạn đang mất mạng. Dữ liệu chưa được lưu.');
   const { data, error } = await supabase.rpc(name, args);
   if (error) {
+    if (error.code === 'PGRST202' && name === 'set_verified_attendance')
+      throw new Error('Máy chủ chưa bật đăng ký và ghi chú hộ cho thành viên đã xác minh. Người phụ trách cần chạy bản cập nhật quyền đăng ký hộ.');
     if (
       error.code === 'PGRST202' &&
       (name === 'quick_create_member' || name === 'quick_create_session')

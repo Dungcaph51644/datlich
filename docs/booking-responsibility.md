@@ -1,5 +1,23 @@
 # Người phụ trách đặt sân (CS)
 
+## Đăng ký và ghi chú hộ sau xác minh
+
+Thành viên đang hoạt động đã xác minh bằng mã cá nhân hoặc tài khoản Supabase đã liên kết có thể chọn **Đi / Không đi / Chưa phản hồi** và sửa ghi chú cho **mọi người trong danh sách buổi**, không cần quyền quản trị hoặc chọn tên của người được đăng ký hộ.
+
+Trên dự án đang dùng:
+
+1. Mở [migration đăng ký hộ](../supabase/migrations/202611190004_verified_attendance.sql), sao chép toàn bộ vào **Supabase → SQL Editor → New query → Run**. Bản này chạy sau các migration phân công/tài chính đã có, có thể chạy lại và không sửa dữ liệu lịch/đăng ký cũ. Không cần chạy lại các migration cũ hoặc đổi secret/Edge Function.
+2. Build/triển khai frontend mới, tải lại website và xác minh mã cá nhân hoặc đăng nhập tài khoản đã liên kết.
+3. Mở chi tiết một buổi còn nhận thay đổi. Tại dòng của bất kỳ thành viên nào, chọn trạng thái hoặc bấm ghi chú; ghi chú tự lưu sau khi ngừng gõ. Tên đang chọn vẫn dùng cho đăng ký nhanh của bản thân, độc lập với người thực sự đã xác minh.
+
+RPC `set_verified_attendance` xác minh lại token/linked account trên máy chủ, dùng khóa và kiểm tra đăng ký đang có. Mã giả, phiên hết hạn/thu hồi, người xác minh hoặc mục tiêu ngừng hoạt động, người ngoài roster đều bị chặn. Không cấp quyền quản trị: thành viên vẫn không vượt hạn đăng ký, buổi đã hủy/kết thúc hoặc giới hạn chỗ. Chỉ trạng thái thay đổi không sửa ghi chú; lưu ghi chú không tự đổi trạng thái; xung đột phiên bản được báo để giữ bản nháp. Lịch sử ghi người thực hiện đã xác minh và dòng người được cập nhật, không gán hành động cho tên đích.
+
+Người chưa xác minh tiếp tục sử dụng đăng ký nhanh theo tên đang chọn như trước. Quyền nhóm tin cậy của API đăng ký nhanh không thay đổi; lựa chọn tên không phải cơ chế xác thực. Đường lưu mới cho người đã xác minh không hạ xuống đăng ký nhanh nếu token bị từ chối.
+
+Nghiệm thu: dùng hai danh tính đã xác minh, A đăng ký/ghi chú cho B; B tải lại hoặc nhận Realtime phải thấy dữ liệu mới. Thử buổi đủ chỗ, hết hạn, đã hủy/kết thúc và hai người cùng sửa một ghi chú. Kiểm thử PostgreSQL/UI cục bộ không thay thế nghiệm thu hai thiết bị thật sau khi áp dụng migration.
+
+Kiểm tra bản cập nhật ngày 19/11/2026: 36 kiểm thử liên quan và TypeScript đạt. PostgreSQL tạm đã kiểm tra thành viên thường dùng mã hoặc linked account, audit đúng người thực hiện, mã giả/hết hạn/thu hồi, trạng thái/người không hợp lệ, đủ chỗ, khóa đăng ký, ghi chú quá dài và xung đột phiên bản. UI kiểm tra nút của người khác, mất quyền, offline và tự lưu đúng dòng đích. Chưa áp dụng migration này hoặc ghi thử đăng ký lên Supabase thật.
+
 ## Bật trên Supabase hiện tại
 
 Không cần thêm biến môi trường, service-role key, SMTP hoặc bật đăng nhập ẩn danh. Website tiếp tục dùng URL và publishable/anon key hiện có. Quản trị viên dùng quyền Supabase Auth đang có; thành viên dùng mã xác minh cá nhân.

@@ -47,7 +47,6 @@ import {
   loginRedirectUrl,
   message,
   monday,
-  registrationArgs,
   rpc,
   summary,
   supabase,
@@ -68,11 +67,12 @@ import {
   BookingPage,
   BookingIdentityForm,
   BookingSessionEditor,
-  CSBadge,
   SessionResponsibility,
   BookingWriteState,
 } from './BookingFeatures';
 import { AutoNote } from './AutoNote';
+import { verifiedAttendanceMember } from './attendanceAccess';
+import { AttendanceMemberRow } from './AttendanceMemberRow';
 import { registrationClosed } from './lib';
 import {
   BulkRegistration,
@@ -2116,6 +2116,7 @@ function AttendancePanel({
   onBookingEdit: () => void;
 }) {
   const [filter, setFilter] = useState<AttendanceStatus | 'all'>('all');
+  const verifiedMember = verifiedAttendanceMember(club);
   const counts = summary(s, club.roster, club.attendance);
   const expired =
     new Date(`${s.session_date}T${s.end_time}+07:00`) <= new Date();
@@ -2229,92 +2230,24 @@ function AttendancePanel({
                     (a) => a.session_id === s.id && a.member_id === m.id,
                   )?.status ?? 'unanswered') === filter,
               )
-              .map((m) => {
-                const row = club.attendance.find(
-                    (a) => a.session_id === s.id && a.member_id === m.id,
-                  ),
-                  status = row?.status ?? 'unanswered';
-                const canEdit =
-                  !locked &&
-                  m.active &&
-                  (club.account?.role === 'admin' || club.memberId === m.id);
-                return (
-                  <div className="attendance-row" key={m.id}>
-                    <div className="attendee">
-                      <span className="avatar">
-                        {m.display_name.split(' ').at(-1)?.slice(0, 1)}
-                      </span>
-                      <div>
-                        <strong>
-                          {m.display_name}
-                          {club.memberId === m.id && <small> (Bạn)</small>}
-                        </strong>
-                        <CSBadge session={s} memberId={m.id} />
-                        <span>
-                          {m.code}
-                          {!m.active && ' · Ngừng hoạt động'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="status-buttons">
-                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                        <button
-                          key={k}
-                          disabled={
-                            !canEdit ||
-                            !club.online ||
-                            club.saveState === 'saving'
-                          }
-                          className={`${k} ${status === k ? 'selected' : ''}`}
-                          aria-pressed={status === k}
-                          onClick={() =>
-                            void club.saveAttendance(
-                              registrationArgs(s.id, m.id, 'status', k),
-                              `Đã cập nhật: ${v}`,
-                            )
-                          }
-                        >
-                          {status === k && <Check size={13} />}
-                          {k === 'unanswered' ? 'Chưa phản hồi' : v}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="attendance-note">
-                      <button
-                        className={
-                          row?.note ? 'note-content' : 'note-placeholder'
-                        }
-                        disabled={
-                          !canEdit ||
-                          !club.online ||
-                          club.saveState === 'saving'
-                        }
-                        onClick={() => onNote(m, row)}
-                      >
-                        {row?.note ||
-                          (canEdit ? '+ Thêm ghi chú' : 'Chưa có ghi chú')}
-                        {canEdit && <Edit3 size={13} />}
-                      </button>
-                      <time>
-                        {row
-                          ? new Date(row.updated_at).toLocaleString('vi-VN', {
-                              timeZone: 'Asia/Ho_Chi_Minh',
-                              day: '2-digit',
-                              month: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : 'Chưa cập nhật'}
-                      </time>
-                    </div>
-                  </div>
-                );
-              })}
+              .map((m) => (
+                <AttendanceMemberRow
+                  key={m.id}
+                  session={s}
+                  member={m}
+                  row={club.attendance.find(a => a.session_id === s.id && a.member_id === m.id)}
+                  club={club}
+                  locked={locked}
+                  onNote={onNote}
+                />
+              ))}
           </div>
           <p className="form-help">
             {club.account?.role === 'admin'
               ? 'Bạn là quản trị viên, có thể cập nhật thay thành viên. Mọi thay đổi được ghi lại.'
-              : 'Bạn đang thao tác theo tên đã chọn. Đổi tên ở góc trên nếu cần.'}{' '}
+              : verifiedMember
+                ? `Bạn đã xác minh là ${verifiedMember.display_name}, có thể đăng ký và ghi chú giúp mọi thành viên trong buổi. Mọi thay đổi được ghi lại.`
+                : 'Bạn đang thao tác theo tên đã chọn. Xác minh mã cá nhân hoặc tài khoản đã liên kết để đăng ký và ghi chú giúp thành viên khác.'}{' '}
             Người chưa xác nhận luôn được tính là Chưa phản hồi.
           </p>
         </>
@@ -2340,18 +2273,27 @@ function NoteForm({
     (a) => a.session_id === session.id && a.member_id === member.id,
   );
   const closed = registrationClosed(current, club.account?.role === 'admin');
+  const verifiedMember = verifiedAttendanceMember(club);
+  const target = club.members.find(m => m.id === member.id);
+  const canNote = !!target?.active && (
+    club.account?.role === 'admin' || club.memberId === member.id || !!verifiedMember
+  );
   return (
     <div>
       <p className="form-intro">
         {member.display_name} · {member.code} · {session.court}
       </p>
       {closed && <div className="alert">{closed}</div>}
+      {verifiedMember && verifiedMember.id !== member.id && (
+        <p className="form-help">{verifiedMember.display_name} đang ghi chú hộ {member.display_name}. Lịch sử lưu theo danh tính đã xác minh.</p>
+      )}
+      {!canNote && <div className="alert">Bạn cần xác minh lại danh tính để ghi chú hộ thành viên này.</div>}
       <AutoNote
         session={current}
         memberId={member.id}
         row={latest}
         club={club}
-        disabled={!club.online || !!closed}
+        disabled={!club.online || !!closed || !canNote}
       />
       <div className="form-actions">
         <button className="btn btn-soft" onClick={close}>

@@ -6,7 +6,13 @@ React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: 
 
 Nút **Hỏi trợ lý** ở góc dưới mở chat tiếng Việt về lịch đánh, người đặt sân, đăng ký/chỗ trống, chi phí và du lịch. Dữ liệu tra cứu mới theo từng câu hỏi; “tôi” theo tên đang chọn. Nguồn mở đúng buổi/bảng phí; tiền nháp và tiền đã chốt được phân biệt. Chatbot chỉ đọc, các thao tác dẫn về chức năng đang có. Tin nhắn chỉ giữ trong phiên; đổi tên/danh tính sẽ xóa nội dung.
 
-Để bật, chạy [migration chatbot](./supabase/migrations/202611190002_club_chat.sql), thêm API key vào **Supabase Edge Function secrets**, deploy function `club-chat` và frontend. Không đặt key trong biến `VITE_`. Xem [hướng dẫn cấu hình, chi phí và nghiệm thu](./docs/ai-chatbot.md) và [mẫu biến môi trường máy chủ](./supabase/functions/.env.example). Mặc định OpenAI `gpt-6-luna`, tối đa 800 token đầu ra; dữ liệu tài chính vẫn yêu cầu xác minh theo cơ chế hiện có. Kiểm tra bằng `npm run test:chat`, `npm run check:chat-types` và `npm run check:chat-live`.
+Để bật, chạy [migration chatbot](./supabase/migrations/202611190002_club_chat.sql), đặt **Supabase Edge Function secret** `AI_PROVIDER=lookup`, deploy function `club-chat` và frontend. Chế độ mặc định này trả lời theo mẫu từ Supabase, không gọi mô hình hoặc tốn phí token, không cần API key AI. OpenAI là tùy chọn trả phí khi chọn `AI_PROVIDER=openai`; không đặt key trong biến `VITE_`. Xem [hướng dẫn cấu hình, chi phí và nghiệm thu](./docs/ai-chatbot.md) và [mẫu biến môi trường máy chủ](./supabase/functions/.env.example). Dữ liệu tài chính vẫn yêu cầu xác minh theo cơ chế hiện có. Kiểm tra bằng `npm run test:chat`, `npm run check:chat-types` và `npm run check:chat-live`.
+
+## Thành viên đã xác minh đăng ký và ghi chú hộ
+
+Thành viên đang hoạt động, đã xác minh bằng mã cá nhân hoặc tài khoản đã liên kết, có thể chọn **Đi / Không đi / Chưa phản hồi** và ghi chú cho mọi người trong danh sách buổi. Không cần đổi tên đang chọn hoặc quyền quản trị. Lịch sử ghi đúng người thực hiện đã xác minh; vẫn kiểm tra hạn đăng ký, số chỗ, trạng thái hủy/kết thúc và phiên bản ghi chú.
+
+Chạy [migration đăng ký hộ](./supabase/migrations/202611190004_verified_attendance.sql) trong **Supabase SQL Editor**, sau các migration phân công/tài chính hiện có, rồi triển khai frontend mới. Không cần đổi secret hoặc deploy Edge Function cho tính năng này. Xem [cách dùng và giới hạn quyền](./docs/booking-responsibility.md#đăng-ký-và-ghi-chú-hộ-sau-xác-minh).
 
 ## Thêm buổi đánh và thành viên bằng tên
 

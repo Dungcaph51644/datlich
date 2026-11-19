@@ -4,6 +4,7 @@ import { configured, message, rpc, selectAll, supabase } from './lib';
 import { noteDrafts } from './drafts';
 import { loadClubSnapshots } from './clubTransport';
 import { invokeClubChat } from './chatClient';
+import { attendanceWriteRequest } from './attendanceAccess';
 import { isPaymentQrPath, uploadPaymentQr as uploadQr } from './paymentQr';
 import {
   EMPTY,
@@ -358,11 +359,8 @@ export function useClub() {
     success = 'Đã lưu đăng ký',
     silent = false,
   ) {
-    const name =
-      data.account?.role === 'admin' || !quickReady
-        ? 'set_attendance'
-        : 'quick_set_attendance';
-    return run(() => rpc(name, args), success, silent);
+    const write = attendanceWriteRequest(args, data, quickReady, bookingTokenRef.current);
+    return run(() => rpc(write.name, write.args), success, silent);
   }
   function bookingRpc<T = unknown>(
     name: string,
