@@ -129,6 +129,46 @@ test('PostgreSQL: weekly responsibility, verified identities, atomic swaps and f
       );
     },
   );
+  await t.test('Code lifetime upgrade grants 60 days, extends valid legacy codes once, and preserves single-use and permissions', async () => {
+    const day = 86400000;
+    await asAdmin();
+    const legacy = await call('issue_booking_code', [ids.Khôi, false]);
+    const expired = await call('issue_booking_code', [ids.Yến, false]);
+    await db.exec('reset role');
+    await db.query("update private.booking_invites set expires_at=now()-interval '1 day' where member_id=$1", [ids.Yến]);
+    const expiredAt = (await db.query<{ expires_at: Date }>('select expires_at from private.booking_invites where member_id=$1', [ids.Yến])).rows[0].expires_at;
+    const upgrade = '202611190001_booking_code_60_days.sql';
+    await migrate(upgrade);
+    let extended = (await db.query<{ expires_at: Date }>('select expires_at from private.booking_invites where member_id=$1', [ids.Khôi])).rows[0].expires_at;
+    assert.equal(new Date(extended).getTime(), new Date(legacy.expires_at).getTime() + 53 * day);
+    await migrate(upgrade);
+    const repeated = (await db.query<{ expires_at: Date }>('select expires_at from private.booking_invites where member_id=$1', [ids.Khôi])).rows[0].expires_at;
+    assert.equal(new Date(repeated).getTime(), new Date(extended).getTime());
+    const stillExpired = (await db.query<{ expires_at: Date }>('select expires_at from private.booking_invites where member_id=$1', [ids.Yến])).rows[0].expires_at;
+    assert.equal(new Date(stillExpired).getTime(), new Date(expiredAt).getTime());
+    await asGuest();
+    await assert.rejects(call('issue_booking_code', [ids.Khôi, false]), /permission denied/);
+    await assert.rejects(call('activate_booking_identity', [expired.code]), /Mã không hợp lệ/);
+    const verified = await call('activate_booking_identity', [legacy.code]);
+    assert.equal(verified.member_id, ids.Khôi);
+    assert.ok(Math.abs(new Date(verified.expires_at).getTime() - Date.now() - 180 * day) < 5000);
+    await assert.rejects(call('activate_booking_identity', [legacy.code]), /Mã không hợp lệ/);
+    await asAdmin();
+    const fresh = await call('issue_booking_code', [ids.Trường, false]);
+    assert.ok(Math.abs(new Date(fresh.expires_at).getTime() - Date.now() - 60 * day) < 5000);
+    await db.exec('reset role');
+    await db.query("update private.booking_invites set expires_at=now()+interval '52 days' where member_id=$1", [ids.Trường]);
+    await asGuest();
+    assert.equal((await call('activate_booking_identity', [fresh.code])).member_id, ids.Trường);
+    await asAdmin();
+    const boundary = await call('issue_booking_code', [ids.Trường, false]);
+    await db.exec('reset role');
+    await db.query('update private.booking_invites set expires_at=now() where member_id=$1', [ids.Trường]);
+    await asGuest();
+    await assert.rejects(call('activate_booking_identity', [boundary.code]), /Mã không hợp lệ/);
+    await db.exec('set role authenticated');
+    await assert.rejects(call('issue_booking_code', [ids.Trường, false]), /quyền quản trị/);
+  });
   await t.test(
     'Names/member IDs alone grant no booking rights; one-time codes and private tokens are not exposed',
     async () => {

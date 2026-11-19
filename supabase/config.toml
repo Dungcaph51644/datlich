@@ -1,0 +1,4 @@
+[functions.club-chat]
+# Guests can ask public schedule questions. The handler forwards user JWTs to
+# PostgREST and the RPC enforces existing finance/booking identity checks.
+verify_jwt = false

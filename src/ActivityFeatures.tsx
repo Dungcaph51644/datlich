@@ -16,6 +16,7 @@ import {
   MapPin,
   Mountain,
   Plus,
+  QrCode,
   Receipt,
   ShieldCheck,
   Trash2,
@@ -25,6 +26,7 @@ import {
 import { Modal } from './Modal';
 import { BookingIdentityForm, BookingWriteState } from './BookingFeatures';
 import { TripCoverPicker } from './TripCoverPicker';
+import { ActivityPayment, ConfirmPayment, PaymentSheet } from './ActivityPayment';
 import { bookingTime, currency, memberName } from './bookingUtils';
 import { dateKey, formatDate, vietnamToday } from './lib';
 import { STATUS_LABELS } from './types';
@@ -57,6 +59,8 @@ type Action = {
     | 'roster'
     | 'fee'
     | 'payment'
+    | 'transfer'
+    | 'confirmPayment'
     | 'participant'
     | 'checklist'
     | 'verify';
@@ -399,6 +403,8 @@ export function ActivitiesPage({
               payment: action.entry
                 ? 'Điều chỉnh khoản thu'
                 : 'Ghi nhận thu / hoàn tiền',
+              transfer: 'Thanh toán chuyển khoản',
+              confirmPayment: 'Xác nhận đã thanh toán',
               participant: action.participant
                 ? 'Sửa đăng ký'
                 : 'Thêm người tham gia',
@@ -459,6 +465,11 @@ export function ActivitiesPage({
                     close={() => setAction(null)}
                   />
                 )}
+                {action.type === 'transfer' && <PaymentSheet club={club} activity={activity} initialPersonId={action.personId} />}
+                {action.type === 'confirmPayment' && activity.can_manage && (() => {
+                  const person = activityFinancialPeople(activity, club.members).find((p) => p.id === action.personId);
+                  return person && <ConfirmPayment club={club} activity={activity} person={person} close={() => setAction(null)} />;
+                })()}
                 {action.type === 'participant' && (
                   <ParticipantForm
                     club={club}
@@ -685,6 +696,7 @@ export function ActivityDetail({
             {a.kind === 'trip' &&
               ` · Cần hoàn lại tiền đóng: ${currency((a.participants ?? []).reduce((total, p) => total + Math.max(0, netPaid(entries, p.id) - (people.find((x) => x.id === p.id)?.due ?? 0)), 0))}`}
           </p>
+          <ActivityPayment key={`${a.id}:${club.memberId ?? club.booking?.verified_member_id ?? ''}`} club={club} activity={a} />
           <div
             className="activity-tabs"
             role="tablist"
@@ -1276,29 +1288,17 @@ function FeePeople({
                   </span>
                 </div>
                 <div className="fee-person-actions">
+                  <button className="text-btn" aria-label={`Thanh toán cho ${p.name}`} onClick={() => onAction({ type: 'transfer', personId: p.id })}><QrCode size={14} />Thanh toán</button>
                   {a.can_manage && (
                     <>
                       {left > 0 && a.fee_status === 'finalized' && (
                         <button
                           className="text-btn"
                           disabled={busy(club)}
-                          onClick={() =>
-                            void club.run(
-                              () =>
-                                club.bookingRpc('record_activity_payment', {
-                                  p_activity: a.id,
-                                  p_person: p.id,
-                                  p_kind: 'settle',
-                                  p_amount: null,
-                                  p_operation: crypto.randomUUID(),
-                                  p_note: 'Đã thu đủ',
-                                }),
-                              'Đã ghi nhận thu đủ số còn thiếu',
-                            )
-                          }
+                          onClick={() => onAction({ type: 'confirmPayment', personId: p.id })}
                         >
                           <CheckCheck size={14} />
-                          Đã thu đủ
+                          Đã thanh toán
                         </button>
                       )}
                       <button

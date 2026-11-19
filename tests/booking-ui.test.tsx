@@ -194,6 +194,14 @@ function fixture(
 beforeEach(() => {});
 afterEach(() => cleanup());
 
+test('Admin code dialog advertises the 60-day single-use lifetime', () => {
+  render(<BookingPage club={fixture({ account: { user_id: 'admin', member_id: 'a', role: 'admin' } })} />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Vòng phân công' }));
+  fireEvent.click(screen.getAllByRole('button', { name: 'Cấp mã cá nhân' })[0]);
+  assert.ok(screen.getByText(/Mã dùng một lần, có hiệu lực 60 ngày/));
+  assert.ok(screen.getByRole('button', { name: 'Tạo mã một lần' }));
+});
+
 test('CS label follows member ID, survives a not-going response, and remains separate from actual booker', () => {
   const { rerender } = render(<CSBadge session={session} memberId="a" />);
   assert.ok(screen.getByText('CS · Phụ trách đặt sân'));

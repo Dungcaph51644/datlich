@@ -132,6 +132,7 @@ export interface ClubActivity {
   cost_note?: string;
   version: number;
   can_manage?: boolean;
+  payment?: ActivityPaymentSettings;
   auto_created?: boolean;
   can_regroup?: boolean;
   merged_into_id?: string | null;
@@ -150,6 +151,22 @@ export interface ClubActivity {
     reason: string;
     created_at: string;
   }[];
+}
+export interface ActivityPaymentSettings {
+  version: number;
+  qr_path: string | null;
+  receiver_name: string;
+  bank_name: string;
+  account_number: string;
+  transfer_note: string;
+  updated_at?: string;
+}
+export interface PaymentQrAsset {
+  path: string;
+  label: string;
+  bank_name: string;
+  account_number: string;
+  created_at: string;
 }
 export interface ActivityData {
   version: number;

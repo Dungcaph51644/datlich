@@ -1411,7 +1411,7 @@ function CodeForm({ club, member }: { club: Club; member: Member }) {
         <strong>
           {member.display_name} · {member.code}
         </strong>
-        . Gửi riêng mã này cho đúng người. Mã dùng một lần, có hiệu lực 7 ngày;
+        . Gửi riêng mã này cho đúng người. Mã dùng một lần, có hiệu lực 60 ngày;
         thành viên không cần email.
       </p>
       {!issued ? (

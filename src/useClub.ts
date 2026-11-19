@@ -3,6 +3,8 @@ import type { User } from '@supabase/supabase-js';
 import { configured, message, rpc, selectAll, supabase } from './lib';
 import { noteDrafts } from './drafts';
 import { loadClubSnapshots } from './clubTransport';
+import { invokeClubChat } from './chatClient';
+import { isPaymentQrPath, uploadPaymentQr as uploadQr } from './paymentQr';
 import {
   EMPTY,
   type Account,
@@ -452,7 +454,22 @@ export function useClub() {
     bookingError,
     activityError,
     bookingRpc,
+    paymentQrUrl: (path: string) => supabase && isPaymentQrPath(path)
+      ? supabase.storage.from('payment-qrs').getPublicUrl(path).data.publicUrl
+      : '',
+    uploadPaymentQr: (file: File, activityId: string) => {
+      if (!supabase) return Promise.reject(new Error('Chưa kết nối Supabase.'));
+      return uploadQr(file, activityId, {
+        prepare: (args) => bookingRpc('prepare_payment_qr_upload', args),
+        complete: (path) => bookingRpc('complete_payment_qr_upload', { p_path: path }),
+        storage: supabase.storage,
+      });
+    },
     verifyBookingIdentity,
     leaveBookingIdentity,
+    askChat: (text: string, history: string[], context: { sessionId?: string; activityId?: string }, signal?: AbortSignal) => {
+      if (!supabase) return Promise.reject(new Error('Chưa cấu hình kết nối Supabase.'));
+      return invokeClubChat(supabase, { message: text, history, memberId: me?.id ?? null, bookingToken: bookingTokenRef.current, ...context }, signal);
+    },
   };
 }

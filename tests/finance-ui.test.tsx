@@ -195,12 +195,16 @@ test('Server allocation and formula are visible; members cannot confirm receipts
   openActivity(fixture(activity({ can_manage: false })));
   assert.ok(screen.getAllByText(/39.500/).length);
   assert.ok(screen.getByText('Công thức & từng khoản được chia'));
-  assert.equal(screen.queryByRole('button', { name: 'Đã thu đủ' }), null);
+  assert.equal(screen.queryByRole('button', { name: 'Đã thanh toán' }), null);
   assert.equal(screen.queryByRole('button', { name: 'Chốt tiền' }), null);
 });
 test('Settle sends one server operation, never a browser-computed amount', async () => {
   openActivity(fixture());
-  fireEvent.click(screen.getByRole('button', { name: 'Đã thu đủ' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Đã thanh toán' }));
+  assert.equal(calls.length, 0);
+  assert.equal((screen.getByRole('button', { name: 'Xác nhận đã thanh toán' }) as HTMLButtonElement).disabled, true);
+  fireEvent.click(screen.getByRole('checkbox', { name: /Tôi đã kiểm tra và nhận đủ tiền/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Xác nhận đã thanh toán' }));
   await waitFor(() => assert.equal(calls.length, 1));
   assert.equal(calls[0].name, 'record_activity_payment');
   assert.equal(calls[0].args.p_kind, 'settle');

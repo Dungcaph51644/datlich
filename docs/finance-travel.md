@@ -1,5 +1,9 @@
 # Tiền sân, thanh toán và Du lịch & sự kiện
 
+## QR chuyển khoản theo buổi/chuyến
+
+Đã bổ sung upload, xem trước, thay/bỏ, dùng lại QR và tài khoản nhận tiền riêng cho từng bảng phí/chuyến đi. Chạy [migration QR thanh toán](../supabase/migrations/202611190003_activity_payment_qr.sql) và triển khai frontend mới. Xem [hướng dẫn QR, quyền và nghiệm thu hai thiết bị](./payment-qr.md). Thành viên bấm **Thanh toán** để xem số tiền/tài khoản; người thu bấm **Đã thanh toán**, xác nhận đã kiểm tra giao dịch rồi mới ghi sổ. Thao tác xem hoặc tải ảnh không đổi trạng thái.
+
 ## Cập nhật: lịch tự có bảng phí và chọn ảnh từ thiết bị
 
 Sau khi đã chạy migration tài chính 003, chạy toàn bộ [migration 004](../supabase/migrations/202611100004_auto_fees_and_covers.sql) trong Supabase **SQL Editor**, rồi tải lại website. Bản này tạo luôn bucket `trip-covers` và chính sách upload; không cần Edge Function hoặc khóa bí mật mới.
@@ -46,7 +50,7 @@ Triển khai: `npm run build`, đưa `dist` lên hosting đang dùng; giữ hai 
 3. Khi thêm tiền cầu có lựa chọn **Tiền cầu tính vào ca 1** (tên theo nhóm đầu tiên). Chọn **Chung cả buổi** để chia cho người duy nhất tham gia ít nhất một nhóm.
 4. **Chia tiền → Xác nhận người chia**: mặc định lấy người chọn Đi. Đánh dấu người thực tế chịu phí không sửa đăng ký gốc. **Theo đăng ký** bỏ xác nhận riêng.
 5. Kiểm tra công thức, người chia và cảnh báo rồi **Chốt tiền**. Máy chủ chặn chốt khi chưa có người chịu phí hoặc có chi phí chưa phân bổ.
-6. Sau khi nhận tiền, bấm **Đã thu đủ** trên dòng thành viên. Máy chủ tự tính số còn thiếu; bấm lại không tạo khoản thu trùng. Thu một phần, thu dư và hoàn tiền dùng **Thu / hoàn**.
+6. Sau khi nhận tiền, bấm **Đã thanh toán** trên dòng thành viên, đánh dấu đã kiểm tra nhận đủ và xác nhận. Máy chủ tự tính số còn thiếu; bấm lại không tạo khoản thu trùng. Thu một phần, thu dư và hoàn tiền dùng **Thu / hoàn**.
 7. Trong **Thu & hoàn**, điều chỉnh khoản ghi nhầm cần lý do: bản cũ được hủy và bản thay thế tạo trong một giao dịch; lỗi thì hoàn tác cả hai. Hủy khoản tiền cũng giữ dấu vết, người hủy và lý do.
 
 ### Chia và chốt
@@ -129,4 +133,4 @@ Nghiệm thu hai phiên thật sau khi chạy SQL và cấp hai danh tính:
 6. Ngắt mạng B, A sửa dữ liệu, nối lại B phải tự cập nhật đầy đủ; tải lại vẫn đúng dữ liệu.
 7. Hai phiên sửa cùng ghi chú: phiên sau phải đối chiếu xung đột, không tự mất nội dung.
 
-Kiểm thử PostgreSQL cục bộ không thay thế nghiệm thu Realtime bằng hai danh tính trên Supabase thật. Khi chưa có migration/mã cá nhân, website báo cần cấu hình; không mô phỏng tiền hoặc đồng bộ. Sheets chỉ làm tham chiếu; không nhập lịch sử. Chưa tích hợp ngân hàng, QR, tự xác nhận chuyển khoản hoặc Zalo.
+Kiểm thử PostgreSQL cục bộ không thay thế nghiệm thu Realtime bằng hai danh tính trên Supabase thật. Khi chưa có migration/mã cá nhân, website báo cần cấu hình; không mô phỏng tiền hoặc đồng bộ. Sheets chỉ làm tham chiếu; không nhập lịch sử. QR tải lên phục vụ chuyển khoản thủ công; chưa tích hợp ngân hàng, tự xác nhận chuyển khoản hoặc Zalo.

@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "composite": false, "types": ["node"] },
+  "include": ["supabase/functions/_shared/chat/**/*.ts"],
+  "exclude": []
+}

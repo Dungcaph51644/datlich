@@ -2,6 +2,12 @@
 
 React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: **mở link → chọn tên → bấm Đi**. Phân công CS, tài chính và du lịch dùng danh tính đã xác minh bằng mã cá nhân hoặc tài khoản Supabase Auth.
 
+## Chatbot AI hỏi đáp
+
+Nút **Hỏi trợ lý** ở góc dưới mở chat tiếng Việt về lịch đánh, người đặt sân, đăng ký/chỗ trống, chi phí và du lịch. Dữ liệu tra cứu mới theo từng câu hỏi; “tôi” theo tên đang chọn. Nguồn mở đúng buổi/bảng phí; tiền nháp và tiền đã chốt được phân biệt. Chatbot chỉ đọc, các thao tác dẫn về chức năng đang có. Tin nhắn chỉ giữ trong phiên; đổi tên/danh tính sẽ xóa nội dung.
+
+Để bật, chạy [migration chatbot](./supabase/migrations/202611190002_club_chat.sql), thêm API key vào **Supabase Edge Function secrets**, deploy function `club-chat` và frontend. Không đặt key trong biến `VITE_`. Xem [hướng dẫn cấu hình, chi phí và nghiệm thu](./docs/ai-chatbot.md) và [mẫu biến môi trường máy chủ](./supabase/functions/.env.example). Mặc định OpenAI `gpt-6-luna`, tối đa 800 token đầu ra; dữ liệu tài chính vẫn yêu cầu xác minh theo cơ chế hiện có. Kiểm tra bằng `npm run test:chat`, `npm run check:chat-types` và `npm run check:chat-live`.
+
 ## Thêm buổi đánh và thành viên bằng tên
 
 Mọi người có thể chọn tên đang hoạt động rồi bấm **Tạo buổi đánh** hoặc **Thêm thành viên**, không cần đăng nhập quản trị. Nếu chưa chọn tên, nút thêm sẽ mở danh sách tên và tiếp tục đúng biểu mẫu sau khi chọn. Lịch sử ghi nhận người thực hiện với hậu tố “chọn tên”. Buổi mới vẫn có danh sách đăng ký và bảng phí trống tự động khi đã bật bản nâng cấp tài chính 004.
@@ -17,6 +23,8 @@ Chạy [migration Album đội](./supabase/migrations/202611110001_team_album.sq
 Nếu đã cài album trước bản sửa xung đột, chạy tiếp [bản sửa HTTP 409](./supabase/migrations/202611110002_album_conflict_http.sql) để yêu cầu sửa từ phiên bản cũ trả thông báo ngay, tránh vòng lặp thử lại của PostgREST. Bản sửa giữ nguyên ảnh và dữ liệu.
 
 ## Tiền sân, thanh toán và du lịch
+
+**QR chuyển khoản riêng:** chạy [migration QR thanh toán](./supabase/migrations/202611190003_activity_payment_qr.sql) sau các bản tài chính đã cài rồi triển khai frontend. Người phụ trách/admin chọn ảnh, xem trước, thay/bỏ và dùng lại QR; thành viên mở **Thanh toán** để xem phần còn phải đóng, tài khoản, sao chép, phóng to và tải ảnh. Xác nhận đã nhận tiền vẫn thủ công. Xem [cách dùng và nghiệm thu QR](./docs/payment-qr.md). Không cần thêm API key hoặc Edge Function.
 
 **Cập nhật thao tác nhanh:** chạy [migration 004](./supabase/migrations/202611100004_auto_fees_and_covers.sql) sau bản tài chính 003 để lịch mới tự có bảng phí trống và chọn ảnh bìa trực tiếp từ thiết bị. Bucket ảnh và quyền upload được tạo trong cùng migration; không cần thêm khóa bí mật. Sau đó chạy [migration cập nhật thực tế](./supabase/migrations/202611110003_practical_updates.sql) để chuẩn hóa quyền `can_manage`, xử lý xung đột phiên bản bằng HTTP 409 và dùng snapshot gộp. Xem [hướng dẫn cập nhật](./docs/finance-travel.md#cập-nhật-lịch-tự-có-bảng-phí-và-chọn-ảnh-từ-thiết-bị). Kiểm tra hiện tại: build đạt và `npm test` đạt 199/199; chưa nghiệm thu upload thật hoặc đồng bộ hai thiết bị trên Supabase sau migration.
 
@@ -149,6 +157,8 @@ Frontend nhận INSERT/UPDATE/DELETE qua Realtime, gom sự kiện 120ms rồi l
 ## Phụ trách đặt sân theo tuần (CS)
 
 Đã bổ sung trang **Phân công CS**, phụ trách tuần này/tuần sau trên trang chủ, nhãn CS theo ID trong đăng ký, đổi lượt có đồng ý, đề xuất lịch công bằng, vòng đủ điều kiện, lịch sử ban đầu và thông báo trong website. Phân công không đồng nghĩa Đã đặt; thông tin người đã đặt thực tế được lưu riêng. Mã cá nhân dùng một lần xác minh quyền đặt sân, không cần email cho thành viên; chọn tên đăng ký nhanh không cấp quyền này.
+
+**Mã cá nhân có hiệu lực 60 ngày:** chạy [migration cập nhật hạn mã](./supabase/migrations/202611190001_booking_code_60_days.sql) rồi triển khai frontend mới. Mã cũ còn hạn, chưa dùng được gia hạn thêm 53 ngày; mã mới có hạn 60 ngày từ lúc cấp. Mã vẫn chỉ dùng một lần, phiên thiết bị vẫn có hạn 180 ngày.
 
 **Khi nâng cấp một backend khác**, chạy [migration phân công CS](./supabase/migrations/202611100002_booking_responsibility.sql), gồm cả phần REALTIME cuối file, rồi chạy [migration cho thành viên cập nhật thông tin đặt sân](./supabase/migrations/202611110005_member_booking_edits.sql). Không cần thay hai biến môi trường hoặc thêm khóa bí mật. Backend của nhóm đã xác nhận có 7 tuần, 11 người trong vòng và publication Realtime CS đang bật. Admin cấp mã và nhập/xác nhận lịch sử ban đầu cho các thành viên đủ điều kiện trước khi đề xuất lịch.
 

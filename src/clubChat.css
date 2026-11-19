@@ -1,0 +1,432 @@
+.club-chat-root {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 75;
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+.club-chat-launcher {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 15px 19px;
+  border-radius: 22px;
+  color: #eaffdf;
+  background: #0c392d;
+  box-shadow:
+    0 8px 36px #092c2538,
+    inset 0 0 0 1px #c9ef6d25;
+  min-height: 60px;
+  transition: transform 0.2s;
+}
+.club-chat-launcher:hover {
+  transform: translateY(-3px);
+}
+.club-chat-launcher > svg {
+  color: #d0f45b;
+}
+.club-chat-launcher > span {
+  display: grid;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+  gap: 3px;
+}
+.club-chat-launcher small {
+  color: #b5ccb9;
+  font-size: 10px;
+  font-weight: 400;
+}
+.club-chat-launcher i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d0f45b;
+}
+.club-chat-panel {
+  width: 410px;
+  height: min(690px, calc(100dvh - 40px));
+  display: flex;
+  flex-direction: column;
+  background: #f8faf5;
+  border: 1px solid #dce7d7;
+  border-radius: 25px;
+  box-shadow: 0 15px 70px #092c2545;
+  overflow: hidden;
+}
+.club-chat-header {
+  padding: 18px 14px 18px 18px;
+  background: #0c392d;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.club-chat-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #d0f45b;
+  color: #0c392d;
+  flex-shrink: 0;
+}
+.club-chat-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 16px;
+  font-weight: 750;
+}
+.club-chat-header h2 svg {
+  color: #d0f45b;
+}
+.club-chat-header p {
+  font-size: 9px;
+  color: #bbd0c0;
+  margin-top: 5px;
+}
+.club-chat-tools {
+  display: flex;
+  margin-left: auto;
+  gap: 0;
+}
+.club-chat-tools button {
+  background: transparent;
+  color: #dcebd9;
+  width: 30px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+}
+.club-chat-tools button:hover {
+  background: #ffffff15;
+}
+.club-chat-identity {
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  border-bottom: 1px solid #e0e8dc;
+  flex-shrink: 0;
+  background: #edf4e6;
+}
+.club-chat-identity > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 70%;
+}
+.online-dot,
+.offline-dot {
+  width: 6px;
+  height: 6px;
+  background: #719e38;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.offline-dot {
+  background: #9b7b4b;
+}
+.club-chat-identity button {
+  background: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #244934;
+  font-weight: 650;
+  padding: 5px 0;
+  white-space: nowrap;
+}
+.club-chat-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px 16px;
+  scrollbar-width: thin;
+}
+.club-chat-welcome {
+  text-align: center;
+  padding: 6px 5px 8px;
+}
+.club-chat-welcome > div:first-child {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 14px;
+  border: 1px solid #dbe8c8;
+  background: #edf5db;
+  color: #54712b;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+}
+.club-chat-welcome h3 {
+  font-size: 19px;
+  letter-spacing: -0.5px;
+  margin-bottom: 9px;
+}
+.club-chat-welcome > p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #697768;
+  max-width: 300px;
+  margin: auto;
+}
+.club-chat-suggestions {
+  display: grid;
+  gap: 9px;
+  margin-top: 22px;
+}
+.club-chat-suggestions button {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid #dce6d4;
+  border-radius: 13px;
+  padding: 12px 13px;
+  background: white;
+  color: #254535;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.club-chat-suggestions button:hover {
+  border-color: #94b65e;
+  background: #f3f8eb;
+}
+.club-chat-message {
+  max-width: 94%;
+  padding: 12px 13px;
+  border: 1px solid #e0e8da;
+  border-radius: 16px 16px 16px 4px;
+  background: #fff;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+.club-chat-message.user {
+  margin-left: auto;
+  max-width: 88%;
+  color: #163e2a;
+  background: #e6f1cf;
+  border-color: #d9e8bd;
+  border-radius: 16px 16px 4px 16px;
+}
+.club-chat-sender {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #7b8a72;
+  margin-bottom: 6px;
+}
+.club-chat-message p {
+  font-size: 12px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+}
+.club-chat-message time {
+  font-size: 8px;
+  color: #7b8775;
+  display: block;
+  margin-top: 10px;
+}
+.club-chat-sources {
+  display: grid;
+  gap: 6px;
+  margin-top: 11px;
+}
+.club-chat-sources a,
+.club-chat-choose {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  line-height: 1.6;
+  font-weight: 650;
+  color: #315123;
+  background: #f0f6e7;
+  border-radius: 9px;
+  padding: 8px 10px;
+  border: 1px solid #e1ead5;
+}
+.club-chat-choose {
+  margin-top: 9px;
+  justify-content: flex-start;
+}
+.club-chat-typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #667557;
+  padding: 9px 0 16px;
+}
+.club-chat-error {
+  background: #fff1e6;
+  border: 1px solid #f0d7c1;
+  color: #7d4627;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 8px;
+}
+.club-chat-error button {
+  background: #fff8ef;
+  color: #754925;
+  font-weight: 700;
+  border: 1px solid #dfc7a9;
+  border-radius: 8px;
+  padding: 7px 12px;
+  margin-top: 10px;
+  font-size: 11px;
+}
+.club-chat-composer {
+  padding: 12px 15px 13px;
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 1px solid #e4eada;
+}
+.club-chat-composer > div:first-of-type {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d7e2cf;
+  background: #f8faf5;
+  border-radius: 14px;
+}
+.club-chat-composer textarea {
+  border: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1.7;
+  width: 100%;
+  padding: 4px 5px;
+  color: #244333;
+  max-height: 120px;
+}
+.club-chat-composer > div > button {
+  width: 39px;
+  height: 39px;
+  border-radius: 11px;
+  background: #133f2c;
+  color: #d0f45b;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.club-chat-footnote {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 8px;
+  color: #85917b;
+  padding: 8px 3px 0;
+}
+.club-chat-privacy {
+  font-size: 8px;
+  line-height: 1.8;
+  color: #8a9482;
+  padding: 5px 3px 0;
+}
+.club-chat-offline {
+  font-size: 11px;
+  color: #8b5c22;
+  margin-bottom: 8px;
+}
+.club-chat-confirm {
+  background: #fff4df;
+  padding: 13px 16px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.club-chat-confirm button {
+  font-size: 11px;
+  background: transparent;
+  color: #6f471c;
+  padding: 8px 14px 0 0;
+  font-weight: 700;
+}
+@media (max-width: 600px) {
+  .club-chat-root {
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .club-chat-launcher {
+    border-radius: 20px;
+    padding: 13px 16px;
+    min-height: 54px;
+  }
+  .club-chat-launcher small {
+    display: none;
+  }
+  .club-chat-panel {
+    width: calc(100vw - 24px);
+    height: min(
+      760px,
+      calc(
+        100dvh - 26px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+      )
+    );
+    border-radius: 22px;
+  }
+  .club-chat-header {
+    padding: 15px 12px;
+  }
+  .club-chat-header h2 {
+    font-size: 15px;
+  }
+  .club-chat-header p {
+    font-size: 8px;
+  }
+  .club-chat-header .club-chat-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .club-chat-tools button {
+    width: 30px;
+    min-height: 44px;
+  }
+  .club-chat-identity {
+    font-size: 10px;
+  }
+  .club-chat-message p {
+    font-size: 13px;
+  }
+  .club-chat-composer textarea {
+    font-size: 16px;
+  }
+  .club-chat-suggestions button {
+    min-height: 46px;
+  }
+  .club-chat-sources a {
+    min-height: 42px;
+    font-size: 11px;
+  }
+  .club-chat-identity button {
+    min-height: 32px;
+  }
+  .club-chat-privacy {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .club-chat-launcher {
+    transition: none;
+  }
+  .club-chat-launcher:hover {
+    transform: none;
+  }
+}

@@ -100,6 +100,7 @@ const ActivitiesPage = lazy(() =>
   })),
 );
 const TeamAlbumPage = lazy(() => import('./TeamAlbumPage'));
+const ClubChat = lazy(() => import('./ClubChat'));
 type Club = ReturnType<typeof useClub>;
 type ModalState =
   | { type: 'login' }
@@ -1030,6 +1031,11 @@ export default function App() {
           Chung đam mê. Bền tình bạn. <span className="footer-dot">●</span>
         </span>
       </footer>
+      <Suspense fallback={null}>
+        <ClubChat memberName={club.me?.display_name ?? null} identityKey={`${club.memberId ?? ''}:${club.user?.id ?? ''}:${club.booking?.verified_member_id ?? ''}`}
+          online={club.online} onChoose={() => setModal({ type: 'choose' })}
+          ask={(text, history, signal) => club.askChat(text, history, { sessionId: route.session, activityId: route.activity }, signal)} />
+      </Suspense>
       {club.notice && (
         <div
           className={`toast ${club.saveState === 'failed' ? 'toast-error' : ''}`}
