@@ -14,7 +14,8 @@
     "check:album-access": "node scripts/check-album-access.mjs",
     "test:chat": "tsx --test tests/chat-*.test.ts tests/chat-*.test.tsx",
     "check:chat-types": "tsc -p tsconfig.chat.json",
-    "check:chat-live": "tsx scripts/check-chat-live.ts"
+    "check:chat-live": "tsx scripts/check-chat-live.ts",
+    "check:chat-access": "node scripts/check-chat-access.mjs"
   },
   "dependencies": {
     "@supabase/server": "^1.9.2",

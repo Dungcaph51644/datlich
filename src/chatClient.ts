@@ -13,6 +13,41 @@ export class ChatClientError extends Error {
     super(message);
   }
 }
+const notDeployed =
+  'Trợ lý AI chưa được triển khai trên máy chủ. Người phụ trách cần triển khai chức năng trợ lý trước khi sử dụng.';
+
+/** Missing functions return 404 to OPTIONS, blocking the POST in browsers.
+ * A simple GET can diagnose this without preflight, credentials, chat content
+ * or a billable model request. */
+async function diagnoseConnection(
+  endpoint: string | undefined,
+  request: typeof fetch,
+  signal?: AbortSignal,
+) {
+  if (!endpoint) return;
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  signal?.addEventListener('abort', abort, { once: true });
+  const timeout = setTimeout(abort, 4000);
+  try {
+    const response = await request(endpoint, {
+      method: 'GET',
+      credentials: 'omit',
+      referrerPolicy: 'no-referrer',
+      signal: controller.signal,
+    });
+    if (response.status === 404) return notDeployed;
+    if (response.status === 401)
+      return 'Máy chủ chưa cho phép truy cập trợ lý. Người phụ trách cần kiểm tra cấu hình quyền truy cập.';
+  } catch {
+    // A disallowed origin or unavailable network can hide every HTTP status.
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', abort);
+  }
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+}
 export function safeChatSource(value: unknown): value is ChatSource {
   if (!value || typeof value !== 'object') return false;
   const s = value as ChatSource;
@@ -53,6 +88,7 @@ export async function invokeClubChat(
     activityId?: string;
   },
   signal?: AbortSignal,
+  diagnostics: { endpoint?: string; fetch?: typeof fetch } = {},
 ): Promise<ChatReply> {
   // Vietnamese text can use several UTF-8 bytes per character. Drop older
   // questions before the request byte cap; keep the current question intact.
@@ -62,16 +98,21 @@ export async function invokeClubChat(
     payload.history.length
   )
     payload.history.shift();
-  const { data, error } = await client.functions.invoke('club-chat', {
+  const {
+    data,
+    error,
+    response: invocationResponse,
+  } = await client.functions.invoke('club-chat', {
     body: payload,
     signal,
   });
   if (error) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     const response =
-      'context' in error && error.context instanceof Response
+      invocationResponse ??
+      ('context' in error && error.context instanceof Response
         ? error.context
-        : null;
+        : null);
     if (response) {
       let info: { error?: string; retryAfter?: number } = {};
       try {
@@ -79,22 +120,29 @@ export async function invokeClubChat(
       } catch {
         /* Gateway errors may not be JSON. */
       }
-      if (info.error)
+      if (response.status === 404) throw new ChatClientError(notDeployed);
+      if (typeof info.error === 'string' && info.error)
         throw new ChatClientError(
           info.error,
           Math.min(86400, Math.max(0, Number(info.retryAfter) || 0)),
-        );
-      if (response.status === 404)
-        throw new ChatClientError(
-          'Trợ lý AI chưa được triển khai trên máy chủ. Bạn vẫn có thể xem trực tiếp các trang chức năng.',
         );
       if (response.status === 401)
         throw new ChatClientError(
           'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại rồi thử nhé.',
         );
     }
+    const base = import.meta.env?.VITE_SUPABASE_URL?.replace(/\/$/, '');
+    const diagnosis = !response
+      ? await diagnoseConnection(
+          diagnostics.endpoint ??
+            (base ? `${base}/functions/v1/club-chat` : undefined),
+          diagnostics.fetch ?? fetch,
+          signal,
+        )
+      : undefined;
+    if (diagnosis) throw new ChatClientError(diagnosis);
     throw new ChatClientError(
-      'Chưa kết nối được trợ lý. Kiểm tra mạng rồi thử lại nhé.',
+      'Chưa gọi được máy chủ trợ lý. Hãy thử lại; nếu vẫn lỗi, người phụ trách cần kiểm tra máy chủ và địa chỉ website được phép truy cập.',
     );
   }
   return parseChatReply(data);

@@ -1,6 +1,6 @@
 # Trợ lý AI của nhóm cầu lông
 
-Chatbot nằm ở góc dưới bên phải, dùng xanh rừng/lime cùng giao diện hiện tại. Có gợi ý câu hỏi, nhập tiếng Việt, trạng thái chờ, nguồn chi tiết, thu nhỏ, đóng, xác nhận xóa, thử lại, giới hạn ký tự và trạng thái mất mạng. Tin nhắn chỉ giữ trong bộ nhớ tab, tối đa 40 tin; tải lại hoặc đổi tên/danh tính sẽ xóa nội dung. Không lưu lịch sử chat vào localStorage hoặc database.
+Chatbot nằm ở góc dưới bên trái, dùng xanh rừng/lime cùng giao diện hiện tại. Có gợi ý câu hỏi, nhập tiếng Việt, trạng thái chờ, nguồn chi tiết, thu nhỏ, đóng, xác nhận xóa, thử lại, giới hạn ký tự và trạng thái mất mạng. Tin nhắn chỉ giữ trong bộ nhớ tab, tối đa 40 tin; tải lại hoặc đổi tên/danh tính sẽ xóa nội dung. Không lưu lịch sử chat vào localStorage hoặc database.
 
 ## Kiến trúc và quyền
 
@@ -32,7 +32,7 @@ Chatbot nằm ở góc dưới bên phải, dùng xanh rừng/lime cùng giao di
 
    Mỗi dòng là một secret: phần trước dấu `=` là **Name/Key**, phần sau là **Value**. Thay phần `<key của project OpenAI>` bằng key thật rồi bấm **Save**. Nếu đã có `AI_MODEL` hoặc `AI_MAX_OUTPUT_TOKENS` cũ, sửa giá trị đó; secret đã lưu được ưu tiên hơn mặc định trong source. [Supabase áp dụng thay đổi secret ngay, không cần deploy lại chỉ vì đổi secret](https://supabase.com/docs/guides/functions/secrets).
 
-   Khi thử Vite, thêm đúng origin vào `CHAT_ALLOWED_ORIGINS`, phân cách bằng dấu phẩy, ví dụ `http://127.0.0.1:5173`. Không dùng wildcard. Hosted Supabase cung cấp sẵn `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Có thể dùng `CHAT_SUPABASE_PUBLISHABLE_KEY` để thay public key cũ. Không đưa service role xuống Netlify frontend.
+   Khi thử Vite, thêm đúng origin vào `CHAT_ALLOWED_ORIGINS`, phân cách bằng dấu phẩy. Vite có thể chuyển sang 5174/5175 khi 5173 đang dùng; `localhost` và `127.0.0.1` là hai origin khác nhau. Ví dụ dùng website chính và trang local hiện tại: `https://caulongteam.netlify.app,http://127.0.0.1:5174`. Mẫu env có sẵn các cổng 5173–5175. Không dùng wildcard. Hosted Supabase cung cấp sẵn `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`. Có thể dùng `CHAT_SUPABASE_PUBLISHABLE_KEY` để thay public key cũ. Không đưa service role xuống Netlify frontend.
 
 4. Chạy SQL chỉ tạo phần database; chưa triển khai mã Edge Function. Nếu chưa có function `club-chat`, hoặc cần cập nhật source, mở terminal trong thư mục dự án và chạy bằng Supabase CLI:
 
@@ -47,6 +47,31 @@ Chatbot nằm ở góc dưới bên phải, dùng xanh rừng/lime cùng giao di
 6. Mở chat, thử lịch tuần này, tên chưa chọn, tên khác danh tính đã xác minh, buổi hủy, câu hỏi tiền chưa chốt, một người đã thu/hoàn, câu hỏi không có dữ liệu, retry và đổi tên khi đang chờ. Bấm nguồn phải mở đúng buổi/bảng phí/chuyến.
 
 Hạn API mô hình hoặc key không hợp lệ trả lỗi, không thay bằng câu trả lời bịa. Thiếu migration/Edge Function/key sẽ hiển thị rõ trợ lý chưa được cấu hình. Nếu tùy chỉnh nhà cung cấp, triển khai interface `ChatModel` tại [lớp mô hình](../supabase/functions/_shared/chat/model.ts); backend/SQL và UI không cần thay. `AI_BASE_URL` chỉ dùng cho API hỗ trợ đúng schema Responses, không phải mọi endpoint chat-completions đều tương thích.
+
+## Khi báo chưa kết nối được trợ lý
+
+Kiểm tra ngày 19/11/2026: RPC `get_chat_context` trên Supabase thật trả **200, version 1**; Edge Function `club-chat` trả **404, NOT_FOUND, Requested function was not found** cho cả website chính và trang local 5174. SQL đã cài, nhưng function chưa được triển khai. Lưu Secrets hoặc chạy SQL không tự triển khai function.
+
+Từ thư mục dự án, đăng nhập Supabase CLI và triển khai đúng tên function:
+
+```sh
+npx supabase login
+npx supabase functions deploy club-chat --project-ref bzxlfayydfwljjccexub
+```
+
+Nếu đã cài CLI toàn cục, bỏ tiền tố `npx`. Lệnh deploy dùng [cấu hình function](../supabase/config.toml) và kèm các file trong `_shared/chat`; không tạo một function trống trong Dashboard. Xem [triển khai Edge Function](https://supabase.com/docs/guides/functions/deploy). Sau deploy, trong **Edge Functions → Secrets**, sửa `CHAT_ALLOWED_ORIGINS` thành `https://caulongteam.netlify.app,http://127.0.0.1:5174` để thử cả hai địa chỉ. Giữ API key/model hiện có. Cổng local khác cần thêm đúng cổng đó. Trên Netlify, triển khai frontend mới để nhận vị trí bên trái và thông báo chẩn đoán mới.
+
+Kiểm tra không dùng token AI hoặc sửa dữ liệu:
+
+```sh
+npm run check:chat-access -- http://127.0.0.1:5174
+```
+
+Kết quả đạt: OPTIONS trả 200/204 và đúng origin được phép (hoặc `*` ở gateway); câu hỏi “tôi” chưa chọn tên trả 200 và `needsMember: true`; RPC trả version 1. Sau đó thử câu hỏi lịch thật để kiểm chứng key, billing, quyền truy cập model và phản hồi AI. Bài kiểm tra kết nối không xác nhận các phần này.
+
+Trình duyệt chặn POST nếu OPTIONS bị 404, nên SDK có thể chỉ báo lỗi kết nối chung. Frontend mới dùng thêm GET đơn giản khi lỗi mạng để phát hiện thiếu function; không gửi key, mã cá nhân hoặc nội dung câu hỏi qua bước này, không gọi mô hình. HTTP 404 sẽ hiển thị rõ trợ lý chưa được triển khai. CORS/mạng không đọc được trạng thái sẽ hướng dẫn kiểm tra máy chủ và địa chỉ được phép, không khẳng định lỗi do mạng thiết bị.
+
+Đã xác nhận trên trình duyệt local 5174: gửi câu hỏi gặp preflight 404 và thông báo mới “Trợ lý AI chưa được triển khai trên máy chủ”. Nút/khung chat ở trái, không tràn ngang tại 320/390/1440px (lề 12px trên điện thoại, 20px desktop). 13 bài kiểm thử client/handler/UI liên quan và TypeScript/build đạt. Chưa xác nhận câu trả lời mô hình thật khi function chưa deploy.
 
 ## Có thể dùng tài khoản ChatGPT đang có không?
 
@@ -80,4 +105,4 @@ npm run build
 
 Lần kiểm tra tự động 19/11/2026: đọc được **18 thành viên, 3 buổi, 17 đăng ký; 1 buổi đã hủy**, khớp RPC mới trong bản sao. Khi kiểm tra đó, Supabase thật chưa có migration chatbot; sau đó người vận hành cho biết đã chạy Supabase, chưa đối chiếu lại trạng thái live. Các bài PostgreSQL kiểm tra dữ liệu nháp/chốt, chia sân/cầu theo hàm hiện có, thu ròng/hoàn, quyền chọn tên so với mã xác minh, lịch mới nhất, thiếu dữ liệu và hạn mức. Các bài handler dùng mô hình thay thế để kiểm tra giao thức/nguồn/lỗi; không xác nhận chất lượng câu trả lời của OpenAI thật.
 
-Còn cần cấu hình secret, chạy migration và deploy Edge Function/frontend trước khi nghiệm thu model thật, CORS production, hạn mức production và tài chính bằng danh tính đã xác minh trên Supabase thật. Không coi dữ liệu kiểm thử cục bộ là giao dịch thật hoặc coi trả lời từ mô hình thay thế là phản hồi AI production.
+Kiểm tra kết nối tiếp theo cùng ngày đã xác nhận migration chatbot hoạt động (RPC trả version 1), còn Edge Function chưa deploy (404). Cần triển khai function/frontend và xác nhận secret/billing/model trước khi nghiệm thu phản hồi AI thật, CORS production, hạn mức production và tài chính bằng danh tính đã xác minh trên Supabase thật. Không coi dữ liệu kiểm thử cục bộ là giao dịch thật hoặc coi trả lời từ mô hình thay thế là phản hồi AI production.
