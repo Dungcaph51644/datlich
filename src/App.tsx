@@ -62,6 +62,9 @@ import {
   type Member,
 } from './types';
 import { useClub } from './useClub';
+import { MemberAvatar, MemberStyleProvider } from './MemberAvatar';
+import { MemberHubPanel, MemberHonorSummary } from './MemberHonorsPanel';
+import './memberHonors.css';
 import { Modal } from './Modal';
 import {
   BookingHome,
@@ -221,7 +224,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <MemberStyleProvider hub={club.memberHub ?? null}>
       <div className="scroll-progress" aria-hidden="true" />
       <header className="header">
         <div className="header-inner">
@@ -848,6 +851,7 @@ export default function App() {
               <AccessPrompt onLogin={() => setModal({ type: 'login' })} />
             ) : (
               <>
+                <MemberHubPanel club={club} onVerify={() => setModal({ type: 'verify-booking' })} />
                 <div className="member-toolbar">
                   <label className="search">
                     <Search size={18} />
@@ -879,9 +883,7 @@ export default function App() {
                         className={`member-card ${member.active ? '' : 'inactive'}`}
                         key={member.id}
                       >
-                        <div className={`avatar avatar-${i % 4}`}>
-                          {member.display_name.split(' ').at(-1)?.slice(0, 1)}
-                        </div>
+                        <MemberAvatar id={member.id} name={member.display_name} className={`avatar-${i % 4}`} />
                         <div className="member-info">
                           <h3>
                             {member.display_name}
@@ -894,6 +896,7 @@ export default function App() {
                               : 'Ngừng hoạt động'}
                           </span>
                           <p>{member.note || 'Hẹn gặp trên sân!'}</p>
+                          <MemberHonorSummary member={member} club={club} onVerify={() => setModal({ type: 'verify-booking' })} />
                         </div>
                         {isAdmin && (
                           <button
@@ -1218,7 +1221,7 @@ export default function App() {
           )}
         </Modal>
       )}
-    </>
+    </MemberStyleProvider>
   );
 }
 

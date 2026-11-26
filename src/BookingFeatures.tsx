@@ -1,4 +1,5 @@
 import React, { useState, type FormEvent } from 'react';
+import { MemberAvatar } from './MemberAvatar';
 import {
   ArrowRight,
   ArrowLeftRight,
@@ -685,13 +686,7 @@ export function BookingPage({ club }: { club: Club }) {
                           {weekLabel(row.week_start, row.week_end)}
                         </span>
                         <h3>
-                          <span className="avatar">
-                            {
-                              memberName(club.members, row.member_id)
-                                .split(' ')
-                                .at(-1)?.[0]
-                            }
-                          </span>
+                          <MemberAvatar id={row.member_id} name={memberName(club.members, row.member_id)} />
                           {memberName(club.members, row.member_id)}
                           {mine && <small>Bạn phụ trách</small>}
                         </h3>

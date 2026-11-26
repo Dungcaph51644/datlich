@@ -2,6 +2,14 @@
 
 React + TypeScript + Vite, Tailwind và Supabase. Đăng ký cầu lông nhanh: **mở link → chọn tên → bấm Đi**. Phân công CS, tài chính và du lịch dùng danh tính đã xác minh bằng mã cá nhân hoặc tài khoản Supabase Auth.
 
+## Huy hiệu vui và avatar
+
+Vào **Thành viên** để xem bộ sưu tập 7 huy hiệu, tiến độ, ghim huy hiệu đã đạt và chọn 4 avatar lầy lội (Jerry, mèo, vịt, ếch). Thành viên đã xác minh được đổi diện mạo của chính mình và bình chọn Cây hài/Đồng đội dễ thương mỗi tháng; chọn tên không cấp quyền này. Avatar và huy hiệu ghim lưu trên máy chủ, dùng chung ở danh sách tên, đăng ký và phân công.
+
+Chạy [migration huy hiệu](./supabase/migrations/202611260001_member_honors.sql) trên Supabase hiện có rồi triển khai frontend cùng ảnh avatar. Không cần key AI hay Edge Function mới. Xem [tiêu chí, hướng dẫn và prompt ảnh](./docs/member-honors.md). Đã qua kiểm thử tự động cục bộ; cần áp dụng SQL và nghiệm thu đồng bộ hai thiết bị trên dự án thật.
+
+**Ảnh đại diện cá nhân:** chạy tiếp [migration tải avatar](./supabase/migrations/202611260002_member_avatar_upload.sql), rồi triển khai frontend mới. Thành viên đã xác minh vào tab **Diện mạo → Chọn ảnh từ thiết bị**, xem trước rồi lưu; có thể thay hoặc bỏ ảnh. Tab **Huy hiệu** tách riêng bộ sưu tập. JPG/PNG/WebP tối đa 8 MB, cắt vuông và thu nhỏ trước khi tải; ảnh lưu trực tuyến và dùng chung trong danh sách tên, đăng ký, phân công.
+
 ## Linh vật Cầu Cầu
 
 Quả cầu lông có biểu cảm và hoạt họa ở góc dưới bên trái, thay trợ lý chatbot: chúc mừng đăng ký đã lưu, vẫy tay khi hẹn buổi sau và nhắc lịch thật theo tên đang chọn. Bấm linh vật để xem chi tiết/tùy chỉnh; có nút tắt chuyển động và ẩn, bật lại ở cuối trang. Tôn trọng giảm chuyển động của thiết bị, nhường chỗ cho hộp thoại. Không cần AI, backend hay secret mới; cập nhật frontend là dùng được. Xem [cách dùng và kiểm thử](./docs/club-mascot.md).

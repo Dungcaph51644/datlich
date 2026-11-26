@@ -1,4 +1,5 @@
 import { Check, Edit3 } from 'lucide-react';
+import { MemberAvatar } from './MemberAvatar';
 import { CSBadge } from './BookingFeatures';
 import { verifiedAttendanceMember } from './attendanceAccess';
 import { registrationArgs } from './lib';
@@ -36,9 +37,7 @@ export function AttendanceMemberRow({
   return (
     <div className="attendance-row">
       <div className="attendee">
-        <span className="avatar">
-          {member.display_name.split(' ').at(-1)?.slice(0, 1)}
-        </span>
+        <MemberAvatar id={member.id} name={member.display_name} />
         <div>
           <strong>
             {member.display_name}

@@ -1,5 +1,6 @@
 import type { BookingData } from './bookingTypes';
 import type { ActivityData } from './activityTypes';
+import type { MemberHub } from './memberHonors';
 export type AttendanceStatus = 'going' | 'not_going' | 'unanswered';
 export type BookingStatus = 'pending' | 'booked' | 'cancelled';
 export interface Member {
@@ -82,6 +83,8 @@ export interface QuickSnapshot {
   roster: Roster[];
 }
 export interface Snapshot {
+  memberHub?: MemberHub | null;
+  memberHubError?: string;
   sessions: CourtSession[];
   members: Member[];
   attendance: Attendance[];

@@ -374,8 +374,25 @@ test('A confirmed registration takes priority over banter and its session link d
       moment={event}
     />,
   );
-  assert.doesNotMatch(screen.getByRole('status').textContent ?? '', /Đã lưu/);
+  assert.doesNotMatch(screen.queryByRole('status')?.textContent ?? '', /Đã lưu/);
   assert.equal(screen.queryByRole('button', { name: /Mở buổi đánh/ }), null);
+});
+
+test('A fresh registration notification still expires after an earlier manual conversation was pinned', async () => {
+  mock.timers.enable({ apis: ['setTimeout'] });
+  const ui = render(<ClubMascot {...props} />);
+  fireEvent.click(screen.getByRole('button', { name: /Mở lời nhắn/ }));
+  fireEvent.click(screen.getByRole('button', { name: /Chọc Cầu Cầu/ }));
+  const event = registrationMoment(data, 'a', 'a', ['s'], 'going', 1)!;
+  ui.rerender(<ClubMascot {...props} data={after} moment={event} />);
+  assert.match(
+    screen.getByRole('status').textContent ?? '',
+    /Đã lưu đăng ký Đi/,
+  );
+  await act(async () => mock.timers.tick(4799));
+  assert.ok(screen.getByRole('status'));
+  await act(async () => mock.timers.tick(1));
+  assert.equal(screen.queryByRole('status'), null);
 });
 
 test('Restoring a hidden mascot does not replay old registrations, and visible toasts reserve space', async () => {

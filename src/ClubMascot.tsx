@@ -259,6 +259,7 @@ export function ClubMascot({
     finishSmash();
     consumeWelcome();
     setMessage(latest);
+    setManual(false);
     setSettings(false);
     silencedUntil.current = Date.now() + 60000;
   }, [moment?.id, latest?.key, blocked, paused, preferences.hidden, onWelcome]);

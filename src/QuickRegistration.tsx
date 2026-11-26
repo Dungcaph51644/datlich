@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { MemberAvatar } from './MemberAvatar';
 import {
   Check,
   ChevronDown,
@@ -71,9 +72,7 @@ export function MemberPicker({
                 onDone();
               }}
             >
-              <span className="avatar">
-                {m.display_name.split(' ').at(-1)?.[0]}
-              </span>
+              <MemberAvatar id={m.id} name={m.display_name} />
               <span>
                 <strong>{m.display_name}</strong>
                 <small>{m.code}</small>

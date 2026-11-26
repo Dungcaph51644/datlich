@@ -1,0 +1,1120 @@
+/* Warm paper, forest green and a little borrowed spotlight. */
+.honor-avatar {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.honor-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.honors-hub {
+  color: #163e34;
+  border: 1px solid #dce3d6;
+  border-radius: 26px;
+  background: #fffefa;
+  margin-bottom: 30px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px #173d3010;
+}
+.honors-intro {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  align-items: center;
+  gap: 38px;
+  padding: 38px;
+  background: #153d33;
+  color: #fffef5;
+  overflow: hidden;
+}
+.honors-intro::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 95% 0%, #91ae5926, transparent 65%),
+    repeating-linear-gradient(90deg, transparent 0 89px, #f2f4da05 90px 91px);
+}
+.honors-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: 1.3px;
+  font-weight: 750;
+  color: #75846b;
+}
+.honors-intro .honors-eyebrow {
+  color: #cadb9a;
+}
+.honors-intro h2 {
+  font-size: clamp(36px, 4vw, 52px);
+  font-weight: 780;
+  line-height: 1.1;
+  letter-spacing: -1.7px;
+  margin: 14px 0 16px;
+}
+.honors-intro h2 em {
+  font-style: normal;
+  color: #d4e5a0;
+}
+.honors-intro p {
+  font-size: 12px;
+  color: #cfdbcc;
+  line-height: 1.9;
+  margin: 0 0 22px;
+}
+.honors-intro .btn {
+  background: #d6e6a6;
+  color: #1b3f31;
+  border: 1px solid #d6e6a6;
+  min-height: 44px;
+  font-size: 12px;
+  box-shadow: 0 4px 12px #071e241c;
+}
+.honors-intro .btn:hover {
+  background: #e4efc3;
+}
+.honors-identity {
+  display: block;
+  margin-top: 13px;
+  font-size: 10px;
+  line-height: 1.7;
+  color: #aec4ac;
+}
+.honors-showcase {
+  position: relative;
+  min-width: 0;
+  padding: 25px 23px 22px;
+  background: #fffef3;
+  color: #284334;
+  border-radius: 20px;
+  box-shadow: 0 16px 34px #071b2230;
+  transform: rotate(2deg);
+  border: 1px solid #fff;
+}
+.honors-showcase-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #7c8968;
+  letter-spacing: 1.8px;
+  font-size: 8px;
+  font-weight: 750;
+}
+.honors-showcase-label::after {
+  content: '✦';
+  font-size: 18px;
+  color: #a2ad72;
+}
+.honors-pass-person {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 22px 0 24px;
+}
+.honors-pass-photo {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  background: #e6ebd2;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #f1f3e3;
+  flex-shrink: 0;
+  font-size: 32px;
+}
+.honors-pass-photo .avatar {
+  width: 64px;
+  height: 64px;
+  font-size: 25px;
+  border-radius: 50%;
+  background: #e6ebd2;
+}
+.honors-pass-person > div {
+  min-width: 0;
+  flex: 1;
+}
+.honors-pass-person small {
+  display: block;
+  font-size: 9px;
+  color: #879277;
+  margin-bottom: 5px;
+}
+.honors-pass-person strong {
+  display: block;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+}
+.honors-pass-person > div > span {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 10px;
+  background: #e9efd7;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #61754a;
+}
+.honors-pass-spark {
+  flex-shrink: 0;
+  color: #afbb75;
+}
+.honors-pass-divider {
+  border-top: 1px dashed #cbd2b8;
+  position: relative;
+}
+.honors-pass-divider::before,
+.honors-pass-divider::after {
+  content: '';
+  position: absolute;
+  top: -9px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1b4235;
+}
+.honors-pass-divider::before {
+  left: -33px;
+}
+.honors-pass-divider::after {
+  right: -33px;
+}
+.honors-avatar-parade {
+  display: flex;
+  align-items: center;
+  margin-top: 20px;
+  min-width: 0;
+}
+.honors-parade-face {
+  width: 34px;
+  flex-shrink: 0;
+  margin-right: -10px;
+  position: relative;
+}
+.honors-parade-face img {
+  display: block;
+  object-fit: cover;
+  border: 2px solid #fffef3;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+}
+.honors-avatar-parade > div:last-child {
+  margin-left: 21px;
+  min-width: 0;
+}
+.honors-avatar-parade strong {
+  display: block;
+  font-size: 10px;
+  color: #485a3e;
+}
+.honors-avatar-parade > div:last-child span {
+  display: block;
+  font-size: 9px;
+  color: #8b927d;
+  margin-top: 5px;
+}
+.honors-vote-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 28px 30px 20px;
+}
+.honors-vote-heading h3 {
+  font-size: 21px;
+  letter-spacing: -0.6px;
+  margin: 7px 0 0;
+}
+.honors-vote-heading p {
+  font-size: 11px;
+  color: #84907c;
+  max-width: 320px;
+  line-height: 1.8;
+  margin: 0;
+}
+.honors-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8aab65;
+  box-shadow: 0 0 0 3px #eaf1df;
+}
+.honors-vote-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 0 26px;
+}
+.honors-vote-card {
+  position: relative;
+  border: 1px solid #e2e6db;
+  border-radius: 18px;
+  background: #fff;
+  padding: 21px;
+  min-width: 0;
+  box-shadow: 0 3px 10px #304f2710;
+}
+.honors-vote-title {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.honors-vote-title h4 {
+  font-size: 16px;
+  font-weight: 750;
+  margin: 0 0 6px;
+  letter-spacing: -0.3px;
+}
+.honors-vote-title p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #87907c;
+  margin: 0;
+}
+.honors-badge-medal {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 64px;
+  flex-shrink: 0;
+  font-size: 29px;
+  border-radius: 42% 42% 48% 48%;
+  background: radial-gradient(
+    circle at 35% 25%,
+    #fff9df,
+    var(--honor-tint, #e1ecdd)
+  );
+  border: 1px solid var(--honor-border, #b5c9a7);
+  box-shadow:
+    inset 0 0 0 4px #ffffff80,
+    0 3px 0 var(--honor-border, #b5c9a7);
+  transform: rotate(-6deg);
+}
+.tone-pink {
+  --honor-tint: #f7dce6;
+  --honor-border: #e3b0c3;
+}
+.tone-green {
+  --honor-tint: #dfebd1;
+  --honor-border: #b4ca9d;
+}
+.tone-orange {
+  --honor-tint: #ffe2bf;
+  --honor-border: #e5be8d;
+}
+.tone-gold {
+  --honor-tint: #f5e5a8;
+  --honor-border: #d6bc6c;
+}
+.tone-blue {
+  --honor-tint: #dce9f6;
+  --honor-border: #aec9df;
+}
+.tone-purple {
+  --honor-tint: #e7dff7;
+  --honor-border: #c5b6de;
+}
+.honors-leaders {
+  margin: 20px 0 17px;
+  background: #f6f8f2;
+  border-radius: 11px;
+  padding: 13px 14px;
+  min-height: 93px;
+}
+.honors-leaders .honors-eyebrow {
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  color: #939c85;
+}
+.honors-leaders > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.honors-leaders .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+.honors-leaders strong {
+  flex: 1;
+}
+.honors-leaders > div > span:last-child {
+  font-size: 10px;
+  border: 1px solid #e0e7d7;
+  background: white;
+  border-radius: 6px;
+  color: #6d8056;
+  padding: 4px 7px;
+}
+.honors-leaders p {
+  font-size: 11px;
+  color: #8c947f;
+  line-height: 1.7;
+  margin: 11px 0 0;
+}
+.honors-vote-card form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 9px;
+}
+.honors-vote-card form > label {
+  flex: 1;
+  min-width: 150px;
+}
+.honors-vote-card label > span {
+  display: block;
+  font-size: 10px;
+  color: #8a947c;
+  margin-bottom: 7px;
+}
+.honors-vote-card select,
+.honors-badges-heading select {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  border: 1px solid #dce3d3;
+  background: #fff;
+  border-radius: 9px;
+  min-height: 43px;
+  padding: 10px;
+  color: #375237;
+  font: inherit;
+  font-size: 12px;
+}
+.honors-vote-card .btn {
+  font-size: 11px;
+  min-height: 43px;
+}
+.honors-vote-card form > p {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #89512f;
+}
+.honors-footnote {
+  color: #939b87;
+  font-size: 10px;
+  line-height: 1.8;
+  margin: 18px 28px 22px;
+}
+.honors-unavailable {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 28px;
+}
+.honors-unavailable p {
+  font-size: 12px;
+  line-height: 1.8;
+  flex: 1;
+}
+.honors-member-line {
+  width: 100%;
+  border-top: 1px dashed #e3e8dc;
+  margin-top: 9px;
+  padding-top: 5px;
+}
+.honors-collection-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 35px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #748853;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+.honors-collection-link > span:first-child {
+  font-size: 18px;
+}
+/* Profile: both tabs stay mounted to preserve the unsaved form and preview. */
+.honors-profile [hidden] {
+  display: none !important;
+}
+.honors-profile .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  padding: 0;
+  margin: -1px;
+  border: 0;
+}
+.honors-profile-cover {
+  display: flex;
+  gap: 19px;
+  align-items: center;
+  padding: 25px 27px;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 100% 0%, #a8bb7830, transparent 65%), #173f35;
+  color: #fffdf1;
+  position: relative;
+  overflow: hidden;
+}
+.honors-profile-cover .honors-eyebrow {
+  color: #b6ca92;
+  font-size: 9px;
+}
+.honors-preview-avatar {
+  width: 94px;
+  height: 94px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 4px solid #f6f5de;
+  border-radius: 50%;
+  background: #dbe5bb;
+  color: #45613e;
+  font-size: 34px;
+  box-shadow: 0 0 0 6px #ffffff0d;
+}
+.honors-preview-avatar img {
+  display: block;
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+.honors-profile-cover h3 {
+  font-size: 26px;
+  margin: 7px 0 9px;
+  letter-spacing: -0.6px;
+  font-weight: 750;
+}
+.honors-profile-cover p {
+  font-size: 12px;
+  color: #dce8bd;
+  margin: 0 0 8px;
+}
+.honors-profile-cover > div > small {
+  font-size: 10px;
+  color: #a4bb9e;
+}
+.honors-profile-stamp {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 72px;
+  height: 86px;
+  border: 1px solid #91a76a66;
+  outline: 1px solid #91a76a30;
+  outline-offset: 4px;
+  border-radius: 36px 36px 12px 12px;
+  color: #bccb91;
+  transform: rotate(8deg);
+}
+.honors-profile-stamp small {
+  font-size: 7px;
+  letter-spacing: 1.5px;
+  text-align: center;
+  line-height: 1.6;
+}
+.honors-profile-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border-bottom: 1px solid #e2e8d9;
+  margin: 23px 0;
+}
+.honors-profile-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #8a947e;
+  padding: 12px 17px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  min-height: 46px;
+  cursor: pointer;
+}
+.honors-profile-tabs button[aria-selected='true'] {
+  color: #3b5e36;
+  border-bottom-color: #668543;
+}
+.honors-profile-tabs button > span {
+  font-size: 9px;
+  background: #ecf1df;
+  border-radius: 5px;
+  padding: 2px 6px;
+  color: #819469;
+}
+.honors-appearance-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 25px;
+  align-items: start;
+}
+.honors-avatar-field,
+.honors-upload-field {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.honors-avatar-field legend,
+.honors-upload-field legend {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3c5637;
+  margin-bottom: 10px;
+}
+.honors-avatar-field > p {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #95a087;
+  margin: 0 0 13px;
+}
+.honors-upload-card {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  min-height: 330px;
+  padding: 22px 19px;
+  background: #f4f6ed;
+  border: 1px dashed #c9d6ba;
+  border-radius: 16px;
+}
+.honors-upload-visual {
+  display: grid;
+  place-items: center;
+  background: #e6edda;
+  color: #8ba26b;
+  border-radius: 50%;
+  width: 85px;
+  height: 85px;
+  overflow: hidden;
+  margin: 2px 0 14px;
+  box-shadow: 0 0 0 5px #fff9;
+}
+.honors-upload-visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.honors-upload-card h4 {
+  font-size: 15px;
+  letter-spacing: -0.3px;
+  margin: 4px 0 8px;
+  color: #43603b;
+}
+.honors-upload-card p {
+  font-size: 11px;
+  line-height: 1.85;
+  color: #87967b;
+  max-width: 255px;
+  margin: 0 0 15px;
+}
+.honors-upload-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #bacda4;
+  background: #fffdf4;
+  border-radius: 10px;
+  min-height: 43px;
+  padding: 10px 14px;
+  color: #567043;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  overflow: hidden;
+  max-width: 100%;
+}
+.honors-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-size: 0;
+}
+.honors-upload-button:focus-within {
+  outline: 3px solid #9fb979;
+  outline-offset: 3px;
+}
+.honors-upload-card > small {
+  font-size: 9px;
+  color: #a0aa94;
+  margin-top: 11px;
+}
+.honors-upload-card .text-btn {
+  font-size: 10px;
+  margin-top: 12px;
+  min-height: 30px;
+  color: #9e7c59;
+}
+.honors-upload-card .honors-upload-unavailable {
+  font-size: 11px;
+  background: #fff9e7;
+  color: #917843;
+  border-radius: 9px;
+  padding: 10px;
+  margin: 5px 0;
+  max-width: none;
+}
+.honors-unsaved-photo {
+  font-size: 9px;
+  color: #69844b;
+  background: #e6eddb;
+  border-radius: 6px;
+  padding: 5px 9px;
+  margin-top: 11px;
+}
+.honors-avatar-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.honors-avatar-options label {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #e1e6d8;
+  border-radius: 13px;
+  padding: 13px 5px 10px;
+  min-width: 0;
+  background: #fffef9;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.honors-avatar-options label.selected {
+  background: #edf3e3;
+  border: 2px solid #829d59;
+  padding: 12px 4px 9px;
+}
+.honors-avatar-options label:has(input:focus-visible) {
+  outline: 3px solid #a5b981;
+  outline-offset: 2px;
+}
+.honors-avatar-options input {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 14px;
+  height: 14px;
+  accent-color: #718b47;
+}
+.honors-avatar-options img,
+.honors-initial {
+  display: grid;
+  place-items: center;
+  width: 63px;
+  height: 63px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #e5ebd8;
+  font-size: 24px;
+  color: #849866;
+  margin: 2px 0 10px;
+}
+.honors-avatar-options strong {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #667e4c;
+  font-weight: 650;
+}
+.honors-avatar-options small {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #7c896c;
+  margin-top: 4px;
+}
+.honors-readonly {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #879779;
+}
+.honors-readonly .text-btn {
+  font-size: 12px;
+}
+.honors-badges-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin: 0 0 18px;
+}
+.honors-badges-heading h3 {
+  font-size: 15px;
+  margin: 0;
+  color: #3f5c36;
+}
+.honors-badges-heading label {
+  max-width: 240px;
+}
+.honors-badge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+}
+.honors-badge-card {
+  display: flex;
+  gap: 15px;
+  align-items: start;
+  min-width: 0;
+  border: 1px solid #e0e7d6;
+  background: #fffdf6;
+  border-radius: 15px;
+  padding: 19px 16px;
+}
+.honors-badge-card.locked {
+  background: #f8f9f4;
+  border-style: dashed;
+}
+.honors-badge-card.locked .honors-badge-medal {
+  filter: grayscale(0.8);
+  opacity: 0.6;
+}
+.honors-badge-card > div {
+  flex: 1;
+  min-width: 0;
+}
+.honors-badge-card h4 {
+  font-size: 13px;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+  margin: 8px 0;
+  color: #47623b;
+}
+.honors-badge-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 8px;
+  letter-spacing: 0.7px;
+  color: #a1aa93;
+  font-weight: 700;
+}
+.honors-badge-card.earned .honors-badge-state {
+  color: #819b55;
+}
+.honors-badge-card p {
+  font-size: 11px;
+  line-height: 1.8;
+  color: #78876c;
+  margin: 6px 0;
+}
+.honors-badge-card p.honors-joke {
+  color: #758c5d;
+  font-weight: 550;
+}
+.honors-badge-card progress {
+  display: block;
+  width: 100%;
+  height: 5px;
+  border: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  accent-color: #8fa95e;
+  margin: 13px 0 7px;
+}
+.honors-badge-card progress::-webkit-progress-bar {
+  background: #e9eddc;
+}
+.honors-badge-card progress::-webkit-progress-value {
+  background: #91a960;
+  border-radius: 10px;
+}
+.honors-badge-card small {
+  font-size: 9px;
+  color: #9ba58b;
+  line-height: 1.8;
+}
+.honors-profile .honors-footnote {
+  margin: 17px 0;
+}
+.honors-save-area {
+  position: sticky;
+  bottom: -1px;
+  z-index: 2;
+  background: #fdfefa;
+  padding: 17px 0 0;
+  margin-top: 22px;
+  border-top: 1px solid #e3e8d9;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.honors-save-area p {
+  flex-basis: 100%;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #976644;
+  text-align: left;
+  margin: 0;
+}
+.honors-save-area p.honors-save-hint {
+  flex: 1;
+  min-width: 160px;
+  font-size: 10px;
+  color: #96a386;
+}
+.honors-save-area .btn {
+  min-height: 45px;
+  min-width: 170px;
+  font-size: 12px;
+  margin-left: auto;
+}
+.honors-profile fieldset:disabled label {
+  cursor: default;
+  opacity: 0.65;
+}
+.honors-profile :focus-visible,
+.honors-hub :focus-visible,
+.honors-member-line :focus-visible {
+  outline: 3px solid #95ad73;
+  outline-offset: 3px;
+}
+@media (max-width: 960px) {
+  .honors-intro {
+    padding: 30px;
+    gap: 25px;
+  }
+  .honors-pass-spark {
+    display: none;
+  }
+  .honors-vote-heading {
+    align-items: start;
+  }
+  .honors-vote-heading p {
+    max-width: 265px;
+  }
+  .honors-showcase {
+    padding: 22px 18px;
+  }
+  .honors-pass-divider::before {
+    left: -28px;
+  }
+  .honors-pass-divider::after {
+    right: -28px;
+  }
+}
+@media (max-width: 760px) {
+  .honors-intro {
+    grid-template-columns: 1fr;
+    padding: 27px 24px 32px;
+    gap: 27px;
+  }
+  .honors-intro h2 {
+    font-size: 43px;
+  }
+  .honors-showcase {
+    width: 100%;
+    max-width: 430px;
+    justify-self: center;
+    padding: 23px;
+    transform: rotate(1deg);
+  }
+  .honors-pass-spark {
+    display: block;
+  }
+  .honors-pass-divider::before {
+    left: -33px;
+  }
+  .honors-pass-divider::after {
+    right: -33px;
+  }
+  .honors-vote-heading {
+    display: block;
+    padding: 25px 21px 18px;
+  }
+  .honors-vote-heading p {
+    margin-top: 11px;
+    max-width: none;
+  }
+  .honors-vote-grid {
+    grid-template-columns: 1fr;
+    padding: 0 16px;
+    gap: 13px;
+  }
+  .honors-vote-card {
+    padding: 18px;
+  }
+  .honors-footnote {
+    margin: 16px 20px 21px;
+  }
+  .honors-unavailable {
+    padding: 17px 20px;
+    flex-wrap: wrap;
+  }
+  .honors-unavailable p {
+    min-width: 180px;
+  }
+  .honors-badge-grid {
+    grid-template-columns: 1fr;
+  }
+  .honors-badges-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .honors-badges-heading label {
+    max-width: none;
+    width: 100%;
+  }
+  .honors-profile-cover {
+    padding: 21px 17px;
+    gap: 13px;
+    border-radius: 15px;
+  }
+  .honors-profile-cover h3 {
+    font-size: 23px;
+  }
+  .honors-preview-avatar {
+    width: 76px;
+    height: 76px;
+    border-width: 3px;
+  }
+  .honors-profile-stamp {
+    width: 48px;
+    height: 65px;
+    gap: 4px;
+  }
+  .honors-profile-stamp svg {
+    width: 20px;
+    height: 20px;
+  }
+  .honors-profile-stamp small {
+    font-size: 6px;
+    letter-spacing: 0.5px;
+  }
+  .honors-appearance-grid {
+    grid-template-columns: 1fr;
+    gap: 23px;
+  }
+  .honors-upload-card {
+    min-height: 0;
+    padding: 20px 17px;
+  }
+  .honors-upload-visual {
+    width: 70px;
+    height: 70px;
+    margin: 0 0 10px;
+  }
+  .honors-upload-card p {
+    max-width: 330px;
+  }
+  .honors-avatar-options {
+    gap: 10px;
+  }
+  .honors-avatar-options img,
+  .honors-initial {
+    width: 67px;
+    height: 67px;
+  }
+  .honors-avatar-options strong {
+    font-size: 10px;
+  }
+  .honors-avatar-options small {
+    font-size: 9px;
+  }
+  .honors-profile-tabs {
+    margin: 19px 0;
+  }
+  .honors-profile-tabs button {
+    flex: 1;
+    padding: 12px 10px;
+  }
+  .honors-vote-card select,
+  .honors-badges-heading select {
+    font-size: 16px;
+    min-height: 46px;
+  }
+  .honors-vote-card .btn {
+    min-height: 46px;
+  }
+  .honors-save-area {
+    padding-top: 14px;
+    margin-top: 20px;
+    gap: 8px;
+  }
+  .honors-save-area .btn {
+    width: 100%;
+  }
+  .honors-save-area p.honors-save-hint {
+    flex-basis: 100%;
+    font-size: 10px;
+    text-align: center;
+  }
+  .honors-desktop-break {
+    display: none;
+  }
+}
+@media (max-width: 380px) {
+  .honors-profile-stamp,
+  .honors-pass-spark {
+    display: none;
+  }
+  .honors-showcase {
+    padding: 22px 16px;
+  }
+  .honors-pass-person strong {
+    font-size: 19px;
+  }
+  .honors-pass-divider::before {
+    left: -26px;
+  }
+  .honors-pass-divider::after {
+    right: -26px;
+  }
+  .honors-avatar-parade > div:last-child strong {
+    font-size: 9px;
+  }
+  .honors-avatar-parade > div:last-child span {
+    font-size: 8px;
+  }
+  .honors-parade-face {
+    width: 29px;
+  }
+  .honors-parade-face img {
+    width: 35px;
+    height: 35px;
+  }
+  .honors-avatar-options small {
+    font-size: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .honors-avatar-options label {
+    transition: none;
+  }
+}

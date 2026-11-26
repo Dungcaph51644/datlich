@@ -4,6 +4,9 @@ import { configured, message, rpc, selectAll, supabase } from './lib';
 import { noteDrafts } from './drafts';
 import { loadClubSnapshots } from './clubTransport';
 import { attendanceWriteRequest } from './attendanceAccess';
+import { useTransientNotice } from './useTransientNotice';
+import { loadMemberHub } from './memberHonors';
+import { createMemberAvatar, memberAvatarUrl, uploadMemberAvatar, type AvatarUploadAttempt } from './memberAvatarUpload';
 import { registrationMoment, type RegistrationMoment } from './mascot';
 import { isPaymentQrPath, uploadPaymentQr as uploadQr } from './paymentQr';
 import {
@@ -47,7 +50,7 @@ export function useClub() {
   const [saveState, setSaveState] = useState<
     'idle' | 'saving' | 'saved' | 'failed'
   >('idle');
-  const [notice, setNotice] = useState('');
+  const { notice, setNotice } = useTransientNotice(saveState);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
     rememberedMember,
   );
@@ -131,8 +134,11 @@ export function useClub() {
     }
     const seq = ++sequence.current;
     try {
-      const { snapshot, booking, activities, bookingProblem, activityProblem } =
-        await loadClubSnapshots(supabase, bookingTokenRef.current, appSnapshotCapability);
+      const [{ snapshot, booking, activities, bookingProblem, activityProblem }, honors] =
+        await Promise.all([
+          loadClubSnapshots(supabase, bookingTokenRef.current, appSnapshotCapability),
+          loadMemberHub(supabase, bookingTokenRef.current),
+        ]);
       const sessions =
         snapshot?.sessions ??
         (await rpc<CourtSession[]>('get_public_schedule'));
@@ -200,7 +206,11 @@ export function useClub() {
       )
         account = null;
       if (seq === sequence.current) {
-        setData({
+        setData((prior) => ({
+          ...honors,
+          // Keep open avatar drafts through an isolated honors read failure.
+          // An identity change must never retain another person's editor.
+          memberHub: honors.memberHub ?? (prior.memberHub?.viewer_member_id === (booking?.verified_member_id ?? null) ? prior.memberHub : null),
           sessions,
           account,
           members,
@@ -210,7 +220,7 @@ export function useClub() {
           templates,
           booking,
           activities,
-        });
+        }));
         setBookingError(bookingProblem);
         setActivityError(activityProblem);
         setQuickReady(!!snapshot);
@@ -477,6 +487,16 @@ export function useClub() {
     bookingError,
     activityError,
     bookingRpc,
+    prepareMemberAvatar: createMemberAvatar,
+    memberAvatarUrl,
+    uploadMemberAvatar: (attempt: AvatarUploadAttempt) => {
+      if (!supabase) return Promise.reject(new Error('Chưa kết nối Supabase.'));
+      return uploadMemberAvatar(attempt, {
+        prepare: (args) => bookingRpc('prepare_member_avatar_upload', args),
+        complete: (path) => bookingRpc('complete_member_avatar_upload', { p_path: path }),
+        storage: supabase.storage,
+      });
+    },
     paymentQrUrl: (path: string) => supabase && isPaymentQrPath(path)
       ? supabase.storage.from('payment-qrs').getPublicUrl(path).data.publicUrl
       : '',
